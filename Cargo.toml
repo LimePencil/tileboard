@@ -1,0 +1,23 @@
+[package]
+name = "tileboard"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+description = "A customizable terminal dashboard with a responsive snapping grid"
+publish = false
+
+[dependencies]
+anyhow = "1"
+chrono = "0.4"
+clap = { version = "4", features = ["derive"] }
+crossterm = "0.29"
+directories = "6"
+ratatui = "0.30"
+serde = { version = "1", features = ["derive"] }
+sysinfo = "0.39"
+tempfile = "3"
+toml = "0.9"
+
+[profile.release]
+lto = "thin"
+strip = true

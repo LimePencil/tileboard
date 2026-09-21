@@ -1,0 +1,148 @@
+version = 1
+
+[[profiles]]
+name = "wide"
+min_width = 110
+min_height = 0
+columns = 6
+rows = 4
+
+[[profiles.tiles]]
+id = "cpu"
+kind = "cpu"
+title = "CPU usage"
+accent = "cyan"
+
+[profiles.tiles.placement]
+column = 0
+row = 0
+column_span = 4
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "clock"
+kind = "clock"
+title = "Local time"
+accent = "magenta"
+
+[profiles.tiles.placement]
+column = 4
+row = 0
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "storage"
+kind = "storage"
+title = "Storage"
+accent = "green"
+
+[profiles.tiles.placement]
+column = 0
+row = 2
+column_span = 6
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles]]
+name = "compact"
+min_width = 70
+min_height = 0
+columns = 4
+rows = 4
+
+[[profiles.tiles]]
+id = "cpu"
+kind = "cpu"
+title = "CPU usage"
+accent = "cyan"
+
+[profiles.tiles.placement]
+column = 0
+row = 0
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "clock"
+kind = "clock"
+title = "Local time"
+accent = "magenta"
+
+[profiles.tiles.placement]
+column = 2
+row = 0
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "storage"
+kind = "storage"
+title = "Storage"
+accent = "green"
+
+[profiles.tiles.placement]
+column = 0
+row = 2
+column_span = 4
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles]]
+name = "narrow"
+min_width = 0
+min_height = 0
+columns = 2
+rows = 6
+
+[[profiles.tiles]]
+id = "cpu"
+kind = "cpu"
+title = "CPU usage"
+accent = "cyan"
+
+[profiles.tiles.placement]
+column = 0
+row = 0
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "clock"
+kind = "clock"
+title = "Local time"
+accent = "magenta"
+
+[profiles.tiles.placement]
+column = 0
+row = 2
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "storage"
+kind = "storage"
+title = "Storage"
+accent = "green"
+
+[profiles.tiles.placement]
+column = 0
+row = 4
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
