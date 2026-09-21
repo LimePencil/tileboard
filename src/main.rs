@@ -7,7 +7,10 @@ use std::{
 use anyhow::{Context, Result, ensure};
 use clap::Parser;
 use crossterm::{
-    event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyEventKind},
+    event::{
+        self, DisableBracketedPaste, DisableMouseCapture, EnableBracketedPaste, EnableMouseCapture,
+        Event, KeyEventKind,
+    },
     execute,
 };
 use tileboard::{
@@ -61,10 +64,10 @@ fn main() -> Result<()> {
     // Ratatui restores terminal modes on panic; also release our mouse capture.
     let previous = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
-        let _ = execute!(io::stdout(), DisableMouseCapture);
+        let _ = execute!(io::stdout(), DisableMouseCapture, DisableBracketedPaste);
         previous(info);
     }));
-    execute!(io::stdout(), EnableMouseCapture)?;
+    execute!(io::stdout(), EnableMouseCapture, EnableBracketedPaste)?;
     while !app.quit {
         if let Some(metrics) = collector.latest() {
             app.update_metrics(metrics);
@@ -75,6 +78,7 @@ fn main() -> Result<()> {
             match event::read()? {
                 Event::Key(key) if key.kind != KeyEventKind::Release => app.handle_key(key),
                 Event::Mouse(mouse) => app.handle_mouse(mouse),
+                Event::Paste(text) => app.paste(&text),
                 Event::Resize(width, height) => {
                     app.resize(ratatui::layout::Rect::new(0, 0, width, height))
                 }
@@ -88,7 +92,7 @@ fn main() -> Result<()> {
 struct TerminalGuard;
 impl Drop for TerminalGuard {
     fn drop(&mut self) {
-        let _ = execute!(io::stdout(), DisableMouseCapture);
+        let _ = execute!(io::stdout(), DisableMouseCapture, DisableBracketedPaste);
         ratatui::restore();
     }
 }

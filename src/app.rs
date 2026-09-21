@@ -2,6 +2,7 @@ use std::{collections::HashMap, path::PathBuf};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     config::{Config, TileConfig},
@@ -17,6 +18,7 @@ pub enum Modal {
     Settings {
         fields: Vec<(String, String)>,
         selected: usize,
+        cursor: usize,
     },
     Help {
         scroll: usize,
@@ -27,6 +29,23 @@ struct Drag {
     origin: Placement,
     start: (u16, u16),
     resize: bool,
+}
+
+fn previous_boundary(value: &str, cursor: usize) -> usize {
+    value
+        .grapheme_indices(true)
+        .map(|(i, _)| i)
+        .take_while(|&i| i < cursor)
+        .last()
+        .unwrap_or(0)
+}
+
+fn next_boundary(value: &str, cursor: usize) -> usize {
+    value
+        .grapheme_indices(true)
+        .map(|(i, _)| i)
+        .find(|&i| i > cursor)
+        .unwrap_or(value.len())
 }
 
 pub struct App {
@@ -44,11 +63,83 @@ pub struct App {
     pub status: String,
     pub quit: bool,
     original: Option<Config>,
-    history: Vec<Config>,
+    history: Vec<(Config, usize, usize)>,
     drag: Option<Drag>,
 }
 
 impl App {
+    fn new_tile_placement(&self, kind: &str) -> Option<Placement> {
+        let minimum = (self.registry.get(kind)?.create)().minimum_size();
+        let profile = &self.config.profiles[self.profile];
+        let area = self.board_area();
+        if area.is_empty() {
+            return None;
+        }
+        let columns = (u32::from(minimum.0) * u32::from(profile.columns))
+            .div_ceil(u32::from(area.width)) as u16;
+        let rows = (u32::from(minimum.1) * u32::from(profile.rows)).div_ceil(u32::from(area.height))
+            as u16;
+        let sizes = [
+            (columns.max(2), rows.max(2)),
+            (columns, rows),
+            (columns + 1, rows),
+            (columns, rows + 1),
+            (columns + 1, rows + 1),
+        ];
+        for (column_span, row_span) in sizes {
+            for row in 0..profile.rows {
+                for column in 0..profile.columns {
+                    let placement = Placement {
+                        column,
+                        row,
+                        column_span,
+                        row_span,
+                    };
+                    if profile.can_place(None, placement) {
+                        let rect = self.tile_rect(placement);
+                        if rect.width >= minimum.0 && rect.height >= minimum.1 {
+                            return Some(placement);
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    pub fn is_dirty(&self) -> bool {
+        self.original
+            .as_ref()
+            .is_some_and(|original| original != &self.config)
+    }
+
+    pub fn tile_rect(&self, placement: Placement) -> Rect {
+        let mut rect = self.grid().rect(placement);
+        if rect.width >= 20 {
+            rect.width -= 1;
+        }
+        if rect.height >= 7 {
+            rect.height -= 1;
+        }
+        rect
+    }
+
+    pub fn paste(&mut self, text: &str) {
+        if let Some(Modal::Settings {
+            fields,
+            selected,
+            cursor,
+        }) = &mut self.modal
+        {
+            for c in text.chars().filter(|c| !c.is_control()) {
+                if fields[*selected].1.len() + c.len_utf8() > 512 {
+                    break;
+                }
+                fields[*selected].1.insert(*cursor, c);
+                *cursor += c.len_utf8();
+            }
+        }
+    }
     pub fn new(config: Config, path: PathBuf, registry: Registry) -> Self {
         let mut app = Self {
             config,
@@ -136,7 +227,8 @@ impl App {
         if self.history.len() >= 100 {
             self.history.remove(0);
         }
-        self.history.push(self.config.clone());
+        self.history
+            .push((self.config.clone(), self.profile, self.selected));
     }
 
     fn begin_edit(&mut self) {
@@ -144,9 +236,7 @@ impl App {
         self.editing = true;
         self.selected = 0;
         self.history.clear();
-        self.status =
-            "Edit mode · arrows move · Shift+arrows resize · Enter applies · s saves · Esc cancels"
-                .into();
+        self.status = "Arrange tiles · ? for all controls".into();
     }
 
     fn end_edit(&mut self) {
@@ -277,6 +367,7 @@ impl App {
                 }
                 self.candidate = None;
                 self.drag = None;
+                self.status = "Selected tile · arrows move · t settings · ? help".into();
             }
             KeyCode::Enter => self.commit_candidate(),
             KeyCode::Left | KeyCode::Right | KeyCode::Up | KeyCode::Down => {
@@ -296,9 +387,10 @@ impl App {
             KeyCode::Char('u') => {
                 self.candidate = None;
                 self.drag = None;
-                if let Some(config) = self.history.pop() {
+                if let Some((config, profile, selected)) = self.history.pop() {
                     self.config = config;
-                    self.selected = self.selected.min(
+                    self.profile = profile;
+                    self.selected = selected.min(
                         self.config.profiles[self.profile]
                             .tiles
                             .len()
@@ -340,7 +432,7 @@ impl App {
         };
         let mut fields = vec![
             ("Title".into(), tile.title.clone()),
-            ("Accent".into(), tile.accent.clone()),
+            ("Accent · ←/→ choose".into(), tile.accent.clone()),
         ];
         for field in self.registry.get(&tile.kind).unwrap().fields {
             fields.push((
@@ -353,17 +445,19 @@ impl App {
             ));
         }
         self.candidate = None;
+        let cursor = fields[0].1.len();
         self.modal = Some(Modal::Settings {
             fields,
             selected: 0,
+            cursor,
         });
-        self.status =
-            "Settings · Tab switches fields · Ctrl+u clears · Enter applies · Esc cancels".into();
+        self.status = "Edit tile settings".into();
     }
 
     fn modal_key(&mut self, key: KeyEvent) {
         let mut modal = self.modal.take().unwrap();
         if key.code == KeyCode::Esc {
+            self.status = "Dialog closed · ? for help".into();
             return;
         }
         match &mut modal {
@@ -382,7 +476,8 @@ impl App {
                     KeyCode::Down | KeyCode::Tab => *selected = (*selected + 1) % count,
                     KeyCode::Up | KeyCode::BackTab => *selected = (*selected + count - 1) % count,
                     KeyCode::Enter => {
-                        if let Some(placement) = self.config.profiles[self.profile].free_slot() {
+                        let kind = self.registry.list()[*selected].kind;
+                        if let Some(placement) = self.new_tile_placement(kind) {
                             let def = self.registry.list()[*selected];
                             let kind = def.kind.to_string();
                             let title = def.name.to_string();
@@ -413,29 +508,63 @@ impl App {
                             self.status = "Tile added · resize with Shift+arrows or h/j/k/l".into();
                             return;
                         }
-                        self.status = "No empty cells · shrink or remove a tile first".into();
+                        self.status = "No readable space · free cells or enlarge terminal".into();
                     }
                     _ => {}
                 }
             }
-            Modal::Settings { fields, selected } => match key.code {
-                KeyCode::Tab | KeyCode::Down => *selected = (*selected + 1) % fields.len(),
+            Modal::Settings {
+                fields,
+                selected,
+                cursor,
+            } => match key.code {
+                KeyCode::Tab | KeyCode::Down => {
+                    *selected = (*selected + 1) % fields.len();
+                    *cursor = fields[*selected].1.len();
+                }
                 KeyCode::BackTab | KeyCode::Up => {
-                    *selected = (*selected + fields.len() - 1) % fields.len()
+                    *selected = (*selected + fields.len() - 1) % fields.len();
+                    *cursor = fields[*selected].1.len();
                 }
                 KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    fields[*selected].1.clear()
+                    fields[*selected].1.clear();
+                    *cursor = 0;
                 }
+                KeyCode::Home => *cursor = 0,
+                KeyCode::End => *cursor = fields[*selected].1.len(),
+                KeyCode::Left | KeyCode::Right if *selected == 1 => {
+                    let colors = ["cyan", "magenta", "green", "yellow", "blue", "red", "white"];
+                    let current = colors
+                        .iter()
+                        .position(|&color| color == fields[1].1)
+                        .unwrap_or(0);
+                    let next = if key.code == KeyCode::Right {
+                        (current + 1) % colors.len()
+                    } else {
+                        (current + colors.len() - 1) % colors.len()
+                    };
+                    fields[1].1 = colors[next].into();
+                    *cursor = fields[1].1.len();
+                }
+                KeyCode::Left => *cursor = previous_boundary(&fields[*selected].1, *cursor),
+                KeyCode::Right => *cursor = next_boundary(&fields[*selected].1, *cursor),
                 KeyCode::Backspace => {
-                    fields[*selected].1.pop();
+                    let previous = previous_boundary(&fields[*selected].1, *cursor);
+                    fields[*selected].1.replace_range(previous..*cursor, "");
+                    *cursor = previous;
+                }
+                KeyCode::Delete => {
+                    let next = next_boundary(&fields[*selected].1, *cursor);
+                    fields[*selected].1.replace_range(*cursor..next, "");
                 }
                 KeyCode::Char(c)
                     if !key
                         .modifiers
                         .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
                 {
-                    if fields[*selected].1.len() < 512 {
-                        fields[*selected].1.push(c);
+                    if !c.is_control() && fields[*selected].1.len() + c.len_utf8() <= 512 {
+                        fields[*selected].1.insert(*cursor, c);
+                        *cursor += c.len_utf8();
                     }
                 }
                 KeyCode::Enter => {
@@ -484,14 +613,14 @@ impl App {
                     .tiles
                     .iter()
                     .position(|tile| {
-                        grid.rect(tile.placement)
+                        self.tile_rect(tile.placement)
                             .contains((event.column, event.row).into())
                     });
                 if let Some(index) = selected {
                     self.selected = index;
                     self.candidate = None;
                     let origin = self.config.profiles[self.profile].tiles[index].placement;
-                    let rect = grid.rect(origin);
+                    let rect = self.tile_rect(origin);
                     let resize = event.column >= rect.right().saturating_sub(2)
                         && event.row == rect.bottom().saturating_sub(1);
                     self.drag = Some(Drag {
@@ -535,7 +664,7 @@ mod tests {
     use super::*;
     fn app() -> App {
         let mut app = App::new(
-            Config::default(),
+            toml::from_str(include_str!("../tests/fixtures/legacy.toml")).unwrap(),
             PathBuf::from("unused.toml"),
             Registry::builtin(),
         );
@@ -606,7 +735,7 @@ mod tests {
     #[test]
     fn mouse_resize_and_blocked_move_keep_layout_valid() {
         let mut app = app();
-        let rect = app.grid().rect(app.config.profiles[0].tiles[0].placement);
+        let rect = app.tile_rect(app.config.profiles[0].tiles[0].placement);
         let mouse = |kind, column, row| MouseEvent {
             kind,
             column,

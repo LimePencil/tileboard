@@ -1,7 +1,10 @@
 //! Statically compiled tile API. Implement `Tile`, then register its factory.
 mod clock;
 mod cpu;
+mod memory;
+mod network;
 mod storage;
+mod system;
 
 use std::collections::BTreeMap;
 
@@ -50,6 +53,9 @@ impl Registry {
         registry.register(cpu::definition());
         registry.register(clock::definition());
         registry.register(storage::definition());
+        registry.register(memory::definition());
+        registry.register(network::definition());
+        registry.register(system::definition());
         registry
     }
 
@@ -90,13 +96,13 @@ impl Registry {
 
 pub fn accent(name: &str) -> Option<Color> {
     Some(match name {
-        "cyan" => Color::Cyan,
-        "magenta" => Color::Magenta,
-        "green" => Color::Green,
-        "yellow" => Color::Yellow,
-        "blue" => Color::Blue,
-        "red" => Color::Red,
-        "white" => Color::White,
+        "cyan" => crate::theme::CYAN,
+        "magenta" => crate::theme::PURPLE,
+        "green" => crate::theme::GREEN,
+        "yellow" => crate::theme::YELLOW,
+        "blue" => Color::Rgb(147, 177, 255),
+        "red" => crate::theme::RED,
+        "white" => crate::theme::TEXT,
         _ => return None,
     })
 }

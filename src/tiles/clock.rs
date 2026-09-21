@@ -1,5 +1,5 @@
 use super::{OptionField, Tile, TileDefinition, accent, option};
-use crate::{config::TileConfig, metrics::Metrics};
+use crate::{config::TileConfig, metrics::Metrics, theme};
 use anyhow::ensure;
 use chrono::format::{Item, StrftimeItems};
 use ratatui::{
@@ -52,7 +52,7 @@ impl Tile for Clock {
             ),
             Line::from(metrics.now.format("%a, %d %b %Y").to_string()),
             Line::from(metrics.now.format("Local · UTC%:z").to_string())
-                .style(Style::default().fg(Color::DarkGray)),
+                .style(Style::default().fg(theme::MUTED)),
         ];
         let y = area.y + area.height.saturating_sub(3) / 2;
         frame.render_widget(

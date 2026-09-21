@@ -1,11 +1,11 @@
 use super::{Tile, TileDefinition, accent};
-use crate::{config::TileConfig, metrics::Metrics};
+use crate::{config::TileConfig, metrics::Metrics, theme};
 use ratatui::{
     Frame,
     layout::Rect,
-    style::{Color, Style},
-    text::Line,
-    widgets::{Gauge, Paragraph, Sparkline},
+    style::{Modifier, Style},
+    text::{Line, Span},
+    widgets::{LineGauge, Paragraph, Sparkline},
 };
 use std::collections::VecDeque;
 
@@ -36,17 +36,40 @@ impl Tile for Cpu {
 
     fn render(&self, frame: &mut Frame, area: Rect, config: &TileConfig, metrics: &Metrics) {
         let Some(cpu) = metrics.cpu else {
-            frame.render_widget(Paragraph::new("Sampling CPU…"), area);
+            frame.render_widget(
+                Paragraph::new(if metrics.ready {
+                    "CPU unavailable"
+                } else {
+                    "Sampling CPU…"
+                }),
+                area,
+            );
             return;
         };
-        let color = accent(&config.accent).unwrap_or(Color::Cyan);
+        let color = accent(&config.accent).unwrap_or(theme::CYAN);
         frame.render_widget(
-            Gauge::default()
-                .ratio(f64::from(cpu.clamp(0.0, 100.0)) / 100.0)
-                .label(format!("{cpu:.1}% · {} cores", metrics.cores.len()))
-                .gauge_style(Style::default().fg(color).bg(Color::DarkGray)),
+            Paragraph::new(Line::from(vec![
+                Span::styled(
+                    format!("{cpu:.1}%"),
+                    Style::default().fg(color).add_modifier(Modifier::BOLD),
+                ),
+                Span::styled(
+                    format!("  {} logical CPUs", metrics.cores.len()),
+                    Style::default().fg(theme::MUTED),
+                ),
+            ])),
             Rect::new(area.x, area.y, area.width, 1),
         );
+        if area.height >= 2 {
+            frame.render_widget(
+                LineGauge::default()
+                    .ratio(f64::from(cpu.clamp(0.0, 100.0)) / 100.0)
+                    .label("")
+                    .filled_style(Style::default().fg(color))
+                    .unfilled_style(Style::default().fg(theme::BORDER)),
+                Rect::new(area.x, area.y + 1, area.width, 1),
+            );
+        }
         if area.height >= 3 {
             let data: Vec<_> = self
                 .history
@@ -73,7 +96,7 @@ impl Tile for Cpu {
             frame.render_widget(
                 Paragraph::new(
                     Line::from("Recent CPU load · 1s samples")
-                        .style(Style::default().fg(Color::DarkGray)),
+                        .style(Style::default().fg(theme::MUTED)),
                 ),
                 Rect::new(area.x, area.bottom() - 1, area.width, 1),
             );

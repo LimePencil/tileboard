@@ -223,12 +223,18 @@ impl Default for Config {
             title: match kind {
                 "cpu" => "CPU usage",
                 "clock" => "Local time",
+                "memory" => "Memory",
+                "network" => "Network",
+                "system" => "System",
                 _ => "Storage",
             }
             .into(),
             accent: match kind {
                 "cpu" => "cyan",
                 "clock" => "magenta",
+                "memory" => "blue",
+                "network" => "cyan",
+                "system" => "yellow",
                 _ => "green",
             }
             .into(),
@@ -255,39 +261,83 @@ impl Default for Config {
         Self {
             version: 1,
             profiles: vec![
+                Profile {
+                    min_height: 18,
+                    ..profile(
+                        "wide",
+                        110,
+                        6,
+                        4,
+                        vec![
+                            tile("cpu", 0, 0, 2, 2),
+                            tile("clock", 4, 0, 2, 2),
+                            tile("memory", 2, 0, 2, 2),
+                            tile("storage", 0, 2, 2, 2),
+                            tile("network", 2, 2, 2, 2),
+                            tile("system", 4, 2, 2, 2),
+                        ],
+                    )
+                },
+                Profile {
+                    min_height: 22,
+                    ..profile(
+                        "compact",
+                        70,
+                        4,
+                        6,
+                        vec![
+                            tile("cpu", 0, 0, 2, 2),
+                            tile("clock", 2, 0, 2, 2),
+                            tile("memory", 0, 2, 2, 2),
+                            tile("network", 2, 2, 2, 2),
+                            tile("storage", 0, 4, 2, 2),
+                            tile("system", 2, 4, 2, 2),
+                        ],
+                    )
+                },
+                Profile {
+                    min_height: 36,
+                    ..profile(
+                        "tall",
+                        0,
+                        2,
+                        12,
+                        vec![
+                            tile("cpu", 0, 0, 2, 2),
+                            tile("clock", 0, 2, 2, 2),
+                            tile("memory", 0, 4, 2, 2),
+                            tile("network", 0, 6, 2, 2),
+                            tile("storage", 0, 8, 2, 2),
+                            tile("system", 0, 10, 2, 2),
+                        ],
+                    )
+                },
+                Profile {
+                    min_height: 18,
+                    ..profile(
+                        "small",
+                        0,
+                        2,
+                        6,
+                        vec![
+                            tile("cpu", 0, 0, 2, 2),
+                            tile("clock", 0, 2, 2, 2),
+                            tile("memory", 0, 4, 2, 2),
+                        ],
+                    )
+                },
                 profile(
-                    "wide",
-                    110,
-                    6,
-                    4,
-                    vec![
-                        tile("cpu", 0, 0, 4, 2),
-                        tile("clock", 4, 0, 2, 2),
-                        tile("storage", 0, 2, 6, 2),
-                    ],
-                ),
-                profile(
-                    "compact",
+                    "short",
                     70,
-                    4,
-                    4,
-                    vec![
-                        tile("cpu", 0, 0, 2, 2),
-                        tile("clock", 2, 0, 2, 2),
-                        tile("storage", 0, 2, 4, 2),
-                    ],
-                ),
-                profile(
-                    "narrow",
-                    0,
-                    2,
                     6,
+                    2,
                     vec![
                         tile("cpu", 0, 0, 2, 2),
-                        tile("clock", 0, 2, 2, 2),
-                        tile("storage", 0, 4, 2, 2),
+                        tile("clock", 4, 0, 2, 2),
+                        tile("memory", 2, 0, 2, 2),
                     ],
                 ),
+                profile("minimal", 0, 2, 2, vec![tile("cpu", 0, 0, 2, 2)]),
             ],
         }
     }
@@ -302,7 +352,8 @@ mod tests {
         let mut config = Config::default();
         assert_eq!(config.profile_for(110, 30), 0);
         assert_eq!(config.profile_for(109, 30), 1);
-        assert_eq!(config.profile_for(69, 30), 2);
+        assert_eq!(config.profile_for(69, 30), 3);
+        assert_eq!(config.profile_for(50, 40), 2);
         config.profiles[0].min_height = 40;
         assert_eq!(config.profile_for(120, 30), 1);
         config.profiles[0].min_aspect = Some(4.0);

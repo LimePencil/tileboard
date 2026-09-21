@@ -1,79 +1,92 @@
 use ratatui::{
     Frame,
     layout::{Alignment, Rect},
-    style::{Color, Modifier, Style},
+    style::{Modifier, Style},
     text::{Line, Span},
     widgets::{Block, BorderType, Borders, Clear, Paragraph, Wrap},
 };
+use unicode_segmentation::UnicodeSegmentation;
+use unicode_width::UnicodeWidthStr;
 
 use crate::{
     app::{App, Modal},
     grid::Placement,
+    theme,
     tiles::accent,
 };
 
-const MUTED: Color = Color::DarkGray;
-
 pub const HELP_LINES: &[&str] = &[
     "DASHBOARD",
-    "e  Edit layout       r  Reload TOML       q  Quit",
+    "e edit layout · r reload TOML · q quit",
     "",
     "LAYOUT EDITOR",
-    "Tab / Shift+Tab     Select next / previous tile",
-    "Arrow keys         Preview movement",
-    "Shift+arrows       Preview resize",
-    "h / l, k / j       Shrink / grow width, height",
-    "Enter              Apply valid preview",
-    "Mouse              Drag tile; drag ◢ corner to resize",
-    "a / d / t          Add / delete / configure tile",
-    "u                  Undo last applied edit",
-    "p                  Preview/edit next responsive profile",
-    "s                  Save all profiles and return to live",
-    "Esc                Discard preview, then cancel session",
+    "Tab / Shift+Tab: next / previous tile",
+    "Arrows: preview movement",
+    "Shift+arrows: preview resize",
+    "h / l: shrink / grow width",
+    "k / j: shrink / grow height",
+    "Enter: apply preview · Esc: discard preview",
+    "Drag a tile to move; drag ◢ to resize",
+    "a add · d delete · t settings · u undo",
+    "p: edit next responsive profile",
+    "s: save all edits and return to live",
+    "Esc without a preview: cancel entire session",
     "",
-    "Profiles are independent. Edits affect the shown profile.",
-    "Resize rules and grid dimensions are edited in TOML.",
-    "Settings: Tab selects a field, Ctrl+u clears it.",
-    "Ctrl+c exits immediately, discarding unsaved edits.",
+    "SETTINGS",
+    "Tab: next field · Ctrl+u: clear field",
+    "Left/Right, Home/End: move text cursor",
+    "Backspace/Delete: remove text · paste supported",
+    "Enter: apply · Esc: cancel settings",
     "",
-    "↑/↓ or PgUp/PgDn scroll · any other key closes",
+    "Profiles are independent. Only the shown profile changes.",
+    "Edit grid dimensions and resize rules in TOML.",
+    "Ctrl+c exits, discarding unsaved edits.",
+    "",
+    "↑/↓ or PgUp/PgDn scroll · Esc closes",
 ];
 
 pub fn draw(frame: &mut Frame, app: &mut App) {
     app.resize(frame.area());
     let area = frame.area();
+    frame.render_widget(
+        Block::default().style(Style::default().bg(theme::BACKGROUND).fg(theme::TEXT)),
+        area,
+    );
     if area.width < 26 || area.height < 10 {
         frame.render_widget(
-            Paragraph::new("Tileboard\nEnlarge to at least 26 × 10\nq quit · Esc cancels edits")
-                .wrap(Wrap { trim: true }),
+            Paragraph::new("Tileboard\nEnlarge to 26 × 10\nCtrl+c quit").wrap(Wrap { trim: true }),
             area,
         );
         return;
     }
     let profile = &app.config.profiles[app.profile];
-    let mode = if app.editing { " EDIT " } else { " LIVE " };
+    let dirty = app.is_dirty();
     let header = Line::from(vec![
         Span::styled(
             " TILEBOARD ",
             Style::default()
-                .fg(Color::Cyan)
+                .fg(theme::CYAN)
                 .add_modifier(Modifier::BOLD),
         ),
         Span::styled(
-            mode,
-            Style::default().fg(Color::Black).bg(if app.editing {
-                Color::Yellow
+            if app.editing {
+                if dirty { " EDIT • " } else { " EDIT " }
             } else {
-                Color::Green
+                " LIVE "
+            },
+            Style::default().fg(theme::BACKGROUND).bg(if app.editing {
+                theme::YELLOW
+            } else {
+                theme::GREEN
             }),
         ),
-        Span::raw(format!(
-            "  {} · {}×{} grid",
-            profile.name, profile.columns, profile.rows
-        )),
         Span::styled(
-            format!("  {}×{} terminal", area.width, area.height),
-            Style::default().fg(MUTED),
+            if area.width >= 55 {
+                format!("   {} · {}×{}", profile.name, profile.columns, profile.rows)
+            } else {
+                String::new()
+            },
+            Style::default().fg(theme::MUTED),
         ),
     ]);
     frame.render_widget(
@@ -81,12 +94,22 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         Rect::new(area.x, area.y, area.width, 1),
     );
     let subtitle = if app.editing {
-        " Arrange your space · selected tile highlighted · drag corner to resize"
+        format!(
+            " {} profile · {} {} · {}",
+            profile.name,
+            profile.tiles.len(),
+            if profile.tiles.len() == 1 {
+                "tile"
+            } else {
+                "tiles"
+            },
+            if dirty { "unsaved" } else { "unchanged" }
+        )
     } else {
-        " Your terminal, at a glance"
+        " A little clarity for your terminal".into()
     };
     frame.render_widget(
-        Paragraph::new(subtitle).style(Style::default().fg(MUTED)),
+        Paragraph::new(subtitle).style(Style::default().fg(theme::MUTED)),
         Rect::new(area.x, area.y + 1, area.width, 1),
     );
 
@@ -94,35 +117,43 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     if app.editing {
         for row in 0..profile.rows {
             for column in 0..profile.columns {
+                let rect = grid.rect(Placement {
+                    column,
+                    row,
+                    column_span: 1,
+                    row_span: 1,
+                });
                 frame.render_widget(
-                    Block::bordered().border_style(Style::default().fg(MUTED)),
-                    grid.rect(Placement {
-                        column,
-                        row,
-                        column_span: 1,
-                        row_span: 1,
-                    }),
+                    Block::bordered()
+                        .border_type(BorderType::Rounded)
+                        .border_style(Style::default().fg(theme::BORDER)),
+                    rect,
                 );
             }
         }
     }
     if profile.tiles.is_empty() {
         frame.render_widget(
-            Paragraph::new("No tiles in this profile.\nPress e, then a to add a tile.")
-                .alignment(Alignment::Center),
+            Paragraph::new(if app.editing {
+                "An empty canvas.\nPress a to add your first tile."
+            } else {
+                "An empty canvas.\nPress e, then a to add a tile."
+            })
+            .alignment(Alignment::Center)
+            .style(Style::default().fg(theme::MUTED)),
             grid.area,
         );
     }
     for (index, config) in profile.tiles.iter().enumerate() {
-        let rect = grid.rect(config.placement);
+        let rect = app.tile_rect(config.placement);
         if rect.is_empty() {
             continue;
         }
         let selected = app.editing && index == app.selected;
         let color = if selected {
-            Color::Yellow
+            theme::YELLOW
         } else {
-            accent(&config.accent).unwrap_or(Color::Cyan)
+            accent(&config.accent).unwrap_or(theme::CYAN)
         };
         let title = if selected {
             format!(
@@ -134,17 +165,24 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         };
         let block = Block::bordered()
             .border_type(BorderType::Rounded)
-            .title(title)
-            .border_style(Style::default().fg(color));
-        let inner = block.inner(rect);
-        frame.render_widget(Clear, rect);
+            .title(Span::styled(
+                title,
+                Style::default().fg(color).add_modifier(Modifier::BOLD),
+            ))
+            .style(theme::surface())
+            .border_style(Style::default().fg(if selected { color } else { theme::BORDER }));
+        let mut inner = block.inner(rect);
+        if inner.width >= 16 {
+            inner.x += 1;
+            inner.width -= 2;
+        }
         frame.render_widget(block, rect);
         let key = (profile.name.clone(), config.id.clone(), config.kind.clone());
         if let Some(tile) = app.tiles.get(&key) {
             let minimum = tile.minimum_size();
             if rect.width < minimum.0 || rect.height < minimum.1 {
                 frame.render_widget(
-                    Paragraph::new("Too small").style(Style::default().fg(MUTED)),
+                    Paragraph::new("Enlarge tile").style(Style::default().fg(theme::MUTED)),
                     inner,
                 );
             } else {
@@ -153,15 +191,13 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         }
         if selected && rect.width > 2 && rect.height > 2 {
             frame.render_widget(
-                Paragraph::new("◢").style(Style::default().fg(Color::Yellow)),
+                Paragraph::new("◢").style(Style::default().fg(theme::YELLOW)),
                 Rect::new(rect.right() - 2, rect.bottom() - 1, 1, 1),
             );
         }
     }
     if let Some(candidate) = app.candidate {
         let valid = app.candidate_valid();
-        let color = if valid { Color::Green } else { Color::Red };
-        let rect = grid.rect(candidate);
         frame.render_widget(
             Block::new()
                 .borders(Borders::ALL)
@@ -171,12 +207,11 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
                 } else {
                     " Blocked "
                 })
-                .border_style(Style::default().fg(color)),
-            rect,
+                .border_style(Style::default().fg(if valid { theme::GREEN } else { theme::RED })),
+            app.tile_rect(candidate),
         );
     }
-
-    let status = if !app.editing && app.metrics.sampled_at.elapsed().as_secs() > 5 {
+    let status = if app.metrics.sampled_at.elapsed().as_secs() > 5 {
         format!("Metrics delayed · {}", app.status)
     } else {
         app.status.clone()
@@ -184,42 +219,70 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     frame.render_widget(
         Paragraph::new(status).style(Style::default().fg(
             if app.candidate.is_some() && !app.candidate_valid() {
-                Color::Red
+                theme::RED
             } else {
-                Color::Yellow
+                theme::MUTED
             },
         )),
         Rect::new(area.x + 1, area.bottom() - 3, area.width - 2, 1),
     );
-    let footer = if app.editing {
-        "Tab select  arrows move  Shift+arrows resize  Enter apply  a add  d delete  t settings  u undo  p profile  s save  Esc cancel  ? help"
-    } else {
-        "e edit layout   r reload config   ? help   q quit"
+    let footer = match &app.modal {
+        Some(Modal::Settings { .. }) => "Tab field  Enter apply\nEsc close  Ctrl+u clear",
+        Some(Modal::Add { .. }) => "↑/↓ select  Enter add\nEsc close",
+        Some(Modal::Help { .. }) => "↑/↓ scroll  Esc close",
+        None if app.candidate.is_some() => {
+            "Enter apply  Esc discard\nArrows move  h/l width  k/j height"
+        }
+        None if app.editing && area.width < 75 => {
+            "s save  Esc cancel  ? help\nTab select  a add  t settings"
+        }
+        None if app.editing => {
+            "Tab select  arrows move  h/j/k/l resize  a add  t settings  d delete\ns save  Esc cancel  Enter apply  u undo  p profile  ? help"
+        }
+        _ => "e edit   ? help   q quit",
     };
     frame.render_widget(
-        Paragraph::new(footer)
-            .style(Style::default().fg(MUTED))
-            .wrap(Wrap { trim: true }),
+        Paragraph::new(footer).style(Style::default().fg(theme::TEXT)),
         Rect::new(area.x + 1, area.bottom() - 2, area.width - 2, 2),
     );
-
     if let Some(modal) = &app.modal {
+        frame
+            .buffer_mut()
+            .set_style(app.board_area(), Style::default().fg(theme::BORDER));
         draw_modal(frame, app, modal);
     }
 }
 
+/// Choose a grapheme boundary that keeps the insertion point inside the field.
+fn input_window(value: &str, cursor: usize, width: usize) -> (String, usize) {
+    let before = &value[..cursor];
+    let mut start = 0;
+    for (index, _) in before.grapheme_indices(true) {
+        if before[index..].width() < width.max(1) {
+            start = index;
+            break;
+        }
+        start = cursor;
+    }
+    (value[start..].to_string(), value[start..cursor].width())
+}
+
 fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
-    let (title, lines): (&str, Vec<Line<'_>>) = match modal {
+    let area = frame.area();
+    let width = area.width.saturating_sub(4).min(68);
+    let inner_width = width.saturating_sub(4) as usize;
+    let (title, lines, cursor_row): (&str, Vec<Line<'_>>, Option<(usize, usize)>) = match modal {
         Modal::Help { scroll } => (
-            " Help · ↑/↓ scroll · Esc close ",
+            " Help ",
             HELP_LINES
                 .iter()
                 .skip(*scroll)
                 .map(|line| Line::from(*line))
                 .collect(),
+            None,
         ),
         Modal::Add { selected } => {
-            let mut lines = vec![Line::from("Choose a tile for this profile"), Line::from("")];
+            let mut lines = vec![Line::from("Choose a tile"), Line::from("")];
             for (i, definition) in app.registry.list().iter().enumerate() {
                 lines.push(
                     Line::from(format!(
@@ -228,18 +291,21 @@ fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
                         definition.name
                     ))
                     .style(Style::default().fg(if i == *selected {
-                        Color::Yellow
+                        theme::YELLOW
                     } else {
-                        Color::White
+                        theme::TEXT
                     })),
                 );
             }
-            lines.push(Line::from(""));
-            lines.push(Line::from("↑/↓ select · Enter add · Esc close"));
-            (" Add tile ", lines)
+            (" Add tile ", lines, None)
         }
-        Modal::Settings { fields, selected } => {
+        Modal::Settings {
+            fields,
+            selected,
+            cursor,
+        } => {
             let mut lines = vec![];
+            let mut cursor_row = None;
             for (i, (label, value)) in fields.iter().enumerate() {
                 lines.push(
                     Line::from(format!(
@@ -247,32 +313,29 @@ fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
                         if i == *selected { "›" } else { " " }
                     ))
                     .style(Style::default().fg(if i == *selected {
-                        Color::Yellow
+                        theme::YELLOW
                     } else {
-                        MUTED
+                        theme::MUTED
                     })),
                 );
-                lines.push(Line::from(format!(
-                    "  {value}{}",
-                    if i == *selected { "▏" } else { "" }
-                )));
+                let shown = if i == *selected {
+                    let (text, column) = input_window(value, *cursor, inner_width);
+                    cursor_row = Some((i * 3 + 1, column + 1));
+                    text
+                } else {
+                    value.clone()
+                };
+                lines.push(Line::from(format!(" {shown}")));
                 lines.push(Line::from(""));
             }
-            lines.push(Line::from(
-                "Accent: cyan magenta green yellow blue red white",
-            ));
-            lines.push(Line::from(
-                "Tab field · Ctrl+u clear · Enter apply · Esc close",
-            ));
-            (" Tile settings ", lines)
+            (" Tile settings ", lines, cursor_row)
         }
     };
-    let area = frame.area();
-    let width = area.width.saturating_sub(4).min(68);
-    let height = area.height.saturating_sub(6).min(lines.len() as u16 + 2);
+    let max_height = area.height.saturating_sub(5);
+    let height = max_height.min(lines.len() as u16 + 2).max(4);
     let rect = Rect::new(
         area.x + (area.width - width) / 2,
-        area.y + 2 + (area.height.saturating_sub(6) - height) / 2,
+        area.y + 2 + (max_height - height) / 2,
         width,
         height,
     );
@@ -280,44 +343,38 @@ fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
     let block = Block::bordered()
         .border_type(BorderType::Rounded)
         .title(title)
-        .border_style(Style::default().fg(Color::Cyan));
-    let inner_height = height.saturating_sub(2) as usize;
-    let paragraph = match modal {
-        Modal::Settings { selected, .. } => {
-            let scroll = (selected * 3 + 2).saturating_sub(inner_height);
-            // Keep the focused field visible even in a short terminal.
-            Paragraph::new(lines).scroll((scroll as u16, 0))
-        }
-        Modal::Add { selected } => {
-            let scroll = (selected + 3).saturating_sub(inner_height);
-            Paragraph::new(lines).scroll((scroll as u16, 0))
-        }
-        Modal::Help { .. } => Paragraph::new(lines).wrap(Wrap { trim: false }),
+        .style(theme::surface())
+        .border_style(Style::default().fg(theme::CYAN));
+    let visible = height.saturating_sub(2) as usize;
+    let scroll = match modal {
+        Modal::Settings { selected, .. } => (selected * 3 + 2).saturating_sub(visible),
+        Modal::Add { selected } => (selected + 3).saturating_sub(visible),
+        _ => 0,
     };
+    let mut paragraph = Paragraph::new(lines).scroll((scroll as u16, 0));
+    if matches!(modal, Modal::Help { .. }) {
+        paragraph = paragraph.wrap(Wrap { trim: false });
+    }
     frame.render_widget(paragraph.block(block), rect);
+    if let Some((row, column)) = cursor_row {
+        frame.set_cursor_position((
+            rect.x + 1 + column as u16,
+            rect.y + 1 + (row - scroll) as u16,
+        ));
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        config::Config,
-        metrics::{DiskUsage, Metrics},
-        tiles::Registry,
-    };
+    use crate::{config::Config, metrics::Metrics, tiles::Registry};
     use ratatui::{Terminal, backend::TestBackend};
-
     #[test]
     fn render_survives_tiny_wide_tall_and_edit_sizes() {
         let mut app = App::new(Config::default(), "unused.toml".into(), Registry::builtin());
         app.update_metrics(Metrics {
             cpu: Some(42.0),
             cores: vec![42.0; 4],
-            disks: vec![DiskUsage {
-                mount: "/".into(),
-                total: 1000,
-                available: 400,
-            }],
             ..Metrics::default()
         });
         for (width, height) in [
@@ -334,20 +391,31 @@ mod tests {
             let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
             terminal.draw(|frame| draw(frame, &mut app)).unwrap();
             if width >= 26 && height >= 10 {
-                let text: String = terminal
-                    .backend()
-                    .buffer()
-                    .content()
-                    .iter()
-                    .map(|c| c.symbol())
-                    .collect();
-                assert!(text.contains("TILEBOARD"));
                 app.handle_key(crossterm::event::KeyCode::Char('e').into());
                 terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+                app.handle_key(crossterm::event::KeyCode::Char('t').into());
+                app.paste("long title 한글 👨‍💻 with lots of text beyond the field width");
+                terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+                app.handle_key(crossterm::event::KeyCode::Esc.into());
                 app.handle_key(crossterm::event::KeyCode::Char('?').into());
                 terminal.draw(|frame| draw(frame, &mut app)).unwrap();
                 app.handle_key(crossterm::event::KeyCode::Esc.into());
                 app.handle_key(crossterm::event::KeyCode::Esc.into());
+            }
+        }
+    }
+    #[test]
+    fn long_unicode_inputs_keep_the_caret_visible() {
+        for value in [
+            "a long title beyond the field",
+            "한글 타일 이름입니다",
+            "👨‍💻👨‍💻👨‍💻name",
+        ] {
+            for width in 3..20 {
+                for cursor in value.char_indices().map(|(i, _)| i).chain([value.len()]) {
+                    let (_, column) = input_window(value, cursor, width);
+                    assert!(column < width);
+                }
             }
         }
     }

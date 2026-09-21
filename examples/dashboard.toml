@@ -3,7 +3,7 @@ version = 1
 [[profiles]]
 name = "wide"
 min_width = 110
-min_height = 0
+min_height = 18
 columns = 6
 rows = 4
 
@@ -16,7 +16,7 @@ accent = "cyan"
 [profiles.tiles.placement]
 column = 0
 row = 0
-column_span = 4
+column_span = 2
 row_span = 2
 
 [profiles.tiles.options]
@@ -36,6 +36,20 @@ row_span = 2
 [profiles.tiles.options]
 
 [[profiles.tiles]]
+id = "memory"
+kind = "memory"
+title = "Memory"
+accent = "blue"
+
+[profiles.tiles.placement]
+column = 2
+row = 0
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
 id = "storage"
 kind = "storage"
 title = "Storage"
@@ -44,7 +58,35 @@ accent = "green"
 [profiles.tiles.placement]
 column = 0
 row = 2
-column_span = 6
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "network"
+kind = "network"
+title = "Network"
+accent = "cyan"
+
+[profiles.tiles.placement]
+column = 2
+row = 2
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "system"
+kind = "system"
+title = "System"
+accent = "yellow"
+
+[profiles.tiles.placement]
+column = 4
+row = 2
+column_span = 2
 row_span = 2
 
 [profiles.tiles.options]
@@ -52,9 +94,9 @@ row_span = 2
 [[profiles]]
 name = "compact"
 min_width = 70
-min_height = 0
+min_height = 22
 columns = 4
-rows = 4
+rows = 6
 
 [[profiles.tiles]]
 id = "cpu"
@@ -85,6 +127,34 @@ row_span = 2
 [profiles.tiles.options]
 
 [[profiles.tiles]]
+id = "memory"
+kind = "memory"
+title = "Memory"
+accent = "blue"
+
+[profiles.tiles.placement]
+column = 0
+row = 2
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "network"
+kind = "network"
+title = "Network"
+accent = "cyan"
+
+[profiles.tiles.placement]
+column = 2
+row = 2
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
 id = "storage"
 kind = "storage"
 title = "Storage"
@@ -92,16 +162,121 @@ accent = "green"
 
 [profiles.tiles.placement]
 column = 0
-row = 2
-column_span = 4
+row = 4
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "system"
+kind = "system"
+title = "System"
+accent = "yellow"
+
+[profiles.tiles.placement]
+column = 2
+row = 4
+column_span = 2
 row_span = 2
 
 [profiles.tiles.options]
 
 [[profiles]]
-name = "narrow"
+name = "tall"
 min_width = 0
-min_height = 0
+min_height = 36
+columns = 2
+rows = 12
+
+[[profiles.tiles]]
+id = "cpu"
+kind = "cpu"
+title = "CPU usage"
+accent = "cyan"
+
+[profiles.tiles.placement]
+column = 0
+row = 0
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "clock"
+kind = "clock"
+title = "Local time"
+accent = "magenta"
+
+[profiles.tiles.placement]
+column = 0
+row = 2
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "memory"
+kind = "memory"
+title = "Memory"
+accent = "blue"
+
+[profiles.tiles.placement]
+column = 0
+row = 4
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "network"
+kind = "network"
+title = "Network"
+accent = "cyan"
+
+[profiles.tiles.placement]
+column = 0
+row = 6
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "storage"
+kind = "storage"
+title = "Storage"
+accent = "green"
+
+[profiles.tiles.placement]
+column = 0
+row = 8
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "system"
+kind = "system"
+title = "System"
+accent = "yellow"
+
+[profiles.tiles.placement]
+column = 0
+row = 10
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles]]
+name = "small"
+min_width = 0
+min_height = 18
 columns = 2
 rows = 6
 
@@ -134,14 +309,84 @@ row_span = 2
 [profiles.tiles.options]
 
 [[profiles.tiles]]
-id = "storage"
-kind = "storage"
-title = "Storage"
-accent = "green"
+id = "memory"
+kind = "memory"
+title = "Memory"
+accent = "blue"
 
 [profiles.tiles.placement]
 column = 0
 row = 4
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles]]
+name = "short"
+min_width = 70
+min_height = 0
+columns = 6
+rows = 2
+
+[[profiles.tiles]]
+id = "cpu"
+kind = "cpu"
+title = "CPU usage"
+accent = "cyan"
+
+[profiles.tiles.placement]
+column = 0
+row = 0
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "clock"
+kind = "clock"
+title = "Local time"
+accent = "magenta"
+
+[profiles.tiles.placement]
+column = 4
+row = 0
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles.tiles]]
+id = "memory"
+kind = "memory"
+title = "Memory"
+accent = "blue"
+
+[profiles.tiles.placement]
+column = 2
+row = 0
+column_span = 2
+row_span = 2
+
+[profiles.tiles.options]
+
+[[profiles]]
+name = "minimal"
+min_width = 0
+min_height = 0
+columns = 2
+rows = 2
+
+[[profiles.tiles]]
+id = "cpu"
+kind = "cpu"
+title = "CPU usage"
+accent = "cyan"
+
+[profiles.tiles.placement]
+column = 0
+row = 0
 column_span = 2
 row_span = 2
 
