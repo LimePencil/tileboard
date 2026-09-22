@@ -2,21 +2,23 @@
 <rect width="100%" height="100%" rx="10" fill="#10151f"/>
 <rect x="12" y="12" width="99" height="18" fill="#10151f"/>
 <text x="12" y="26" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="bold" xml:space="preserve" textLength="99" lengthAdjust="spacingAndGlyphs"> TILEBOARD </text>
-<rect x="111" y="12" width="54" height="18" fill="#8de1bb"/>
-<text x="111" y="26" fill="#10151f" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="54" lengthAdjust="spacingAndGlyphs"> LIVE </text>
+<rect x="111" y="12" width="54" height="18" fill="#f7ce82"/>
+<text x="111" y="26" fill="#10151f" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="54" lengthAdjust="spacingAndGlyphs"> EDIT </text>
 <rect x="165" y="12" width="117" height="18" fill="#10151f"/>
 <text x="165" y="26" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="117" lengthAdjust="spacingAndGlyphs">   wide · 6×4</text>
 <rect x="282" y="12" width="810" height="18" fill="#10151f"/>
 <rect x="12" y="30" width="1080" height="18" fill="#10151f"/>
-<text x="12" y="44" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1080" lengthAdjust="spacingAndGlyphs"> A little clarity for your terminal                                                                                     </text>
+<text x="12" y="44" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1080" lengthAdjust="spacingAndGlyphs"> wide profile · 6 tiles · unchanged                                                                                     </text>
 <rect x="12" y="48" width="1080" height="18" fill="#10151f"/>
 <rect x="12" y="66" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="66" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="80" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">╭</text>
-<rect x="30" y="66" width="99" height="18" fill="#161e2a"/>
-<text x="30" y="80" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="bold" xml:space="preserve" textLength="99" lengthAdjust="spacingAndGlyphs"> CPU usage </text>
-<rect x="129" y="66" width="234" height="18" fill="#161e2a"/>
-<text x="129" y="80" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="234" lengthAdjust="spacingAndGlyphs">─────────────────────────╮</text>
+<rect x="21" y="66" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="80" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">╔</text>
+<rect x="30" y="66" width="153" height="18" fill="#182b2a"/>
+<text x="30" y="80" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="bold" xml:space="preserve" textLength="153" lengthAdjust="spacingAndGlyphs"> Preview 1×2 ════</text>
+<rect x="183" y="66" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="80" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">╗</text>
+<rect x="192" y="66" width="171" height="18" fill="#161e2a"/>
+<text x="192" y="80" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="171" lengthAdjust="spacingAndGlyphs">══════════════════╗</text>
 <rect x="363" y="66" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="66" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="80" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">╭</text>
@@ -33,14 +35,17 @@
 <text x="840" y="80" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="234" lengthAdjust="spacingAndGlyphs">─────────────────────────╮</text>
 <rect x="1074" y="66" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="84" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="84" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="98" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
-<rect x="30" y="84" width="9" height="18" fill="#161e2a"/>
-<rect x="39" y="84" width="135" height="18" fill="#161e2a"/>
+<rect x="21" y="84" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="98" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="30" y="84" width="9" height="18" fill="#182b2a"/>
+<rect x="39" y="84" width="135" height="18" fill="#182b2a"/>
 <text x="39" y="98" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="135" lengthAdjust="spacingAndGlyphs">▀▀█ █ █   █▀▀  </text>
-<rect x="174" y="84" width="180" height="18" fill="#161e2a"/>
+<rect x="174" y="84" width="9" height="18" fill="#182b2a"/>
+<rect x="183" y="84" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="98" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="192" y="84" width="162" height="18" fill="#161e2a"/>
 <rect x="354" y="84" width="9" height="18" fill="#161e2a"/>
-<text x="354" y="98" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="354" y="98" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
 <rect x="363" y="84" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="84" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="98" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -58,14 +63,17 @@
 <text x="1065" y="98" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="84" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="102" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="102" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="116" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
-<rect x="30" y="102" width="9" height="18" fill="#161e2a"/>
-<rect x="39" y="102" width="135" height="18" fill="#161e2a"/>
+<rect x="21" y="102" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="116" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="30" y="102" width="9" height="18" fill="#182b2a"/>
+<rect x="39" y="102" width="135" height="18" fill="#182b2a"/>
 <text x="39" y="116" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="135" lengthAdjust="spacingAndGlyphs">█▀▀ ▀▀█   ▀▀█ %</text>
-<rect x="174" y="102" width="180" height="18" fill="#161e2a"/>
+<rect x="174" y="102" width="9" height="18" fill="#182b2a"/>
+<rect x="183" y="102" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="116" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="192" y="102" width="162" height="18" fill="#161e2a"/>
 <rect x="354" y="102" width="9" height="18" fill="#161e2a"/>
-<text x="354" y="116" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="354" y="116" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
 <rect x="363" y="102" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="102" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="116" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -86,14 +94,17 @@
 <text x="1065" y="116" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="102" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="120" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="120" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="134" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
-<rect x="30" y="120" width="9" height="18" fill="#161e2a"/>
-<rect x="39" y="120" width="135" height="18" fill="#161e2a"/>
+<rect x="21" y="120" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="134" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="30" y="120" width="9" height="18" fill="#182b2a"/>
+<rect x="39" y="120" width="135" height="18" fill="#182b2a"/>
 <text x="39" y="134" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="135" lengthAdjust="spacingAndGlyphs">▀▀▀   ▀ ▄ ▀▀▀  </text>
-<rect x="174" y="120" width="180" height="18" fill="#161e2a"/>
+<rect x="174" y="120" width="9" height="18" fill="#182b2a"/>
+<rect x="183" y="120" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="134" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="192" y="120" width="162" height="18" fill="#161e2a"/>
 <rect x="354" y="120" width="9" height="18" fill="#161e2a"/>
-<text x="354" y="134" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="354" y="134" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
 <rect x="363" y="120" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="120" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="134" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -114,16 +125,20 @@
 <text x="1065" y="134" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="120" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="138" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="138" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="152" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
-<rect x="30" y="138" width="9" height="18" fill="#161e2a"/>
-<rect x="39" y="138" width="45" height="18" fill="#161e2a"/>
+<rect x="21" y="138" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="152" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="30" y="138" width="9" height="18" fill="#182b2a"/>
+<rect x="39" y="138" width="45" height="18" fill="#182b2a"/>
 <text x="39" y="152" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="bold" xml:space="preserve" textLength="45" lengthAdjust="spacingAndGlyphs">24.5%</text>
-<rect x="84" y="138" width="144" height="18" fill="#161e2a"/>
-<text x="84" y="152" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="144" lengthAdjust="spacingAndGlyphs">  8 logical CPUs</text>
+<rect x="84" y="138" width="99" height="18" fill="#182b2a"/>
+<text x="84" y="152" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="99" lengthAdjust="spacingAndGlyphs">  8 logical</text>
+<rect x="183" y="138" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="152" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="192" y="138" width="36" height="18" fill="#161e2a"/>
+<text x="192" y="152" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="36" lengthAdjust="spacingAndGlyphs">CPUs</text>
 <rect x="228" y="138" width="126" height="18" fill="#161e2a"/>
 <rect x="354" y="138" width="9" height="18" fill="#161e2a"/>
-<text x="354" y="152" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="354" y="152" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
 <rect x="363" y="138" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="138" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="152" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -146,16 +161,20 @@
 <text x="1065" y="152" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="138" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="156" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="156" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="170" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
-<rect x="30" y="156" width="18" height="18" fill="#161e2a"/>
-<rect x="48" y="156" width="72" height="18" fill="#161e2a"/>
+<rect x="21" y="156" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="170" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="30" y="156" width="18" height="18" fill="#182b2a"/>
+<rect x="48" y="156" width="72" height="18" fill="#182b2a"/>
 <text x="48" y="170" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="72" lengthAdjust="spacingAndGlyphs">────────</text>
-<rect x="120" y="156" width="225" height="18" fill="#161e2a"/>
-<text x="120" y="170" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="225" lengthAdjust="spacingAndGlyphs">─────────────────────────</text>
+<rect x="120" y="156" width="63" height="18" fill="#182b2a"/>
+<text x="120" y="170" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="63" lengthAdjust="spacingAndGlyphs">───────</text>
+<rect x="183" y="156" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="170" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="192" y="156" width="153" height="18" fill="#161e2a"/>
+<text x="192" y="170" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="153" lengthAdjust="spacingAndGlyphs">─────────────────</text>
 <rect x="345" y="156" width="9" height="18" fill="#161e2a"/>
 <rect x="354" y="156" width="9" height="18" fill="#161e2a"/>
-<text x="354" y="170" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="354" y="170" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
 <rect x="363" y="156" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="156" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="170" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -175,19 +194,22 @@
 <text x="1065" y="170" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="156" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="174" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="174" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="188" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
-<rect x="30" y="174" width="9" height="18" fill="#161e2a"/>
-<rect x="39" y="174" width="306" height="18" fill="#161e2a"/>
+<rect x="21" y="174" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="188" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="30" y="174" width="9" height="18" fill="#182b2a"/>
+<rect x="39" y="174" width="144" height="18" fill="#182b2a"/>
+<rect x="183" y="174" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="188" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="192" y="174" width="153" height="18" fill="#161e2a"/>
 <rect x="345" y="174" width="9" height="18" fill="#161e2a"/>
 <rect x="354" y="174" width="9" height="18" fill="#161e2a"/>
-<text x="354" y="188" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="354" y="188" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
 <rect x="363" y="174" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="174" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="188" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="381" y="174" width="9" height="18" fill="#161e2a"/>
 <rect x="390" y="174" width="306" height="18" fill="#161e2a"/>
-<text x="390" y="188" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="306" lengthAdjust="spacingAndGlyphs">10.0 GiB available                </text>
+<text x="390" y="188" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="306" lengthAdjust="spacingAndGlyphs">10.0 GiB available·               </text>
 <rect x="696" y="174" width="9" height="18" fill="#161e2a"/>
 <rect x="705" y="174" width="9" height="18" fill="#161e2a"/>
 <text x="705" y="188" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -200,14 +222,18 @@
 <text x="1065" y="188" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="174" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="192" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="192" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="206" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
-<rect x="30" y="192" width="9" height="18" fill="#161e2a"/>
-<rect x="39" y="192" width="306" height="18" fill="#161e2a"/>
-<text x="39" y="206" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="306" lengthAdjust="spacingAndGlyphs">▂   ▂▃▂   ▁▃▃▁   ▂▃▂   ▂▃▂   ▁▃▃▁ </text>
+<rect x="21" y="192" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="206" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="30" y="192" width="9" height="18" fill="#182b2a"/>
+<rect x="39" y="192" width="144" height="18" fill="#182b2a"/>
+<text x="39" y="206" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="144" lengthAdjust="spacingAndGlyphs">▂   ▂▃▂   ▁▃▃▁  </text>
+<rect x="183" y="192" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="206" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="192" y="192" width="153" height="18" fill="#161e2a"/>
+<text x="192" y="206" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="153" lengthAdjust="spacingAndGlyphs">▂▃▂   ▂▃▂   ▁▃▃▁ </text>
 <rect x="345" y="192" width="9" height="18" fill="#161e2a"/>
 <rect x="354" y="192" width="9" height="18" fill="#161e2a"/>
-<text x="354" y="206" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="354" y="206" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
 <rect x="363" y="192" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="192" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="206" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -228,14 +254,18 @@
 <text x="1065" y="206" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="192" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="210" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="210" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="224" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
-<rect x="30" y="210" width="9" height="18" fill="#161e2a"/>
-<rect x="39" y="210" width="306" height="18" fill="#161e2a"/>
-<text x="39" y="224" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="306" lengthAdjust="spacingAndGlyphs">█▇▄▇████▅▆████▆▅████▇▄▇████▅▆████▅</text>
+<rect x="21" y="210" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="224" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="30" y="210" width="9" height="18" fill="#182b2a"/>
+<rect x="39" y="210" width="144" height="18" fill="#182b2a"/>
+<text x="39" y="224" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="144" lengthAdjust="spacingAndGlyphs">█▇▄▇████▅▆████▆▅</text>
+<rect x="183" y="210" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="224" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="192" y="210" width="153" height="18" fill="#161e2a"/>
+<text x="192" y="224" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="153" lengthAdjust="spacingAndGlyphs">███▇▄▇████▅▆████▅</text>
 <rect x="345" y="210" width="9" height="18" fill="#161e2a"/>
 <rect x="354" y="210" width="9" height="18" fill="#161e2a"/>
-<text x="354" y="224" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="354" y="224" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
 <rect x="363" y="210" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="210" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="224" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -253,14 +283,17 @@
 <text x="1065" y="224" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="210" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="228" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="228" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="242" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
-<rect x="30" y="228" width="9" height="18" fill="#161e2a"/>
-<rect x="39" y="228" width="306" height="18" fill="#161e2a"/>
-<text x="39" y="242" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="306" lengthAdjust="spacingAndGlyphs">CPU history                       </text>
+<rect x="21" y="228" width="9" height="18" fill="#182b2a"/>
+<text x="21" y="242" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="30" y="228" width="9" height="18" fill="#182b2a"/>
+<rect x="39" y="228" width="144" height="18" fill="#182b2a"/>
+<text x="39" y="242" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="144" lengthAdjust="spacingAndGlyphs">CPU history     </text>
+<rect x="183" y="228" width="9" height="18" fill="#182b2a"/>
+<text x="183" y="242" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
+<rect x="192" y="228" width="153" height="18" fill="#161e2a"/>
 <rect x="345" y="228" width="9" height="18" fill="#161e2a"/>
 <rect x="354" y="228" width="9" height="18" fill="#161e2a"/>
-<text x="354" y="242" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
+<text x="354" y="242" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">║</text>
 <rect x="363" y="228" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="228" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="242" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -278,12 +311,10 @@
 <text x="1065" y="242" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="228" width="18" height="18" fill="#10151f"/>
 <rect x="12" y="246" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="246" width="9" height="18" fill="#161e2a"/>
-<text x="21" y="260" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">╰</text>
-<rect x="30" y="246" width="36" height="18" fill="#161e2a"/>
-<text x="30" y="260" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="36" lengthAdjust="spacingAndGlyphs"> 1s </text>
-<rect x="66" y="246" width="297" height="18" fill="#161e2a"/>
-<text x="66" y="260" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="297" lengthAdjust="spacingAndGlyphs">────────────────────────────────╯</text>
+<rect x="21" y="246" width="171" height="18" fill="#182b2a"/>
+<text x="21" y="260" fill="#8de1bb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="171" lengthAdjust="spacingAndGlyphs">╚═════════════════╝</text>
+<rect x="192" y="246" width="171" height="18" fill="#161e2a"/>
+<text x="192" y="260" fill="#f7ce82" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="171" lengthAdjust="spacingAndGlyphs">═════════════════◢╝</text>
 <rect x="363" y="246" width="9" height="18" fill="#10151f"/>
 <rect x="372" y="246" width="9" height="18" fill="#161e2a"/>
 <text x="372" y="260" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">╰</text>
@@ -457,6 +488,7 @@
 <rect x="21" y="390" width="9" height="18" fill="#161e2a"/>
 <text x="21" y="404" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="30" y="390" width="324" height="18" fill="#161e2a"/>
+<text x="30" y="404" fill="#d6dfeb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="324" lengthAdjust="spacingAndGlyphs">                  ·                 </text>
 <rect x="354" y="390" width="9" height="18" fill="#161e2a"/>
 <text x="354" y="404" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="363" y="390" width="9" height="18" fill="#10151f"/>
@@ -464,7 +496,7 @@
 <text x="372" y="404" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="381" y="390" width="9" height="18" fill="#161e2a"/>
 <rect x="390" y="390" width="306" height="18" fill="#161e2a"/>
-<text x="390" y="404" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="306" lengthAdjust="spacingAndGlyphs">↑ send                            </text>
+<text x="390" y="404" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="306" lengthAdjust="spacingAndGlyphs">↑ send            ·               </text>
 <rect x="696" y="390" width="9" height="18" fill="#161e2a"/>
 <rect x="705" y="390" width="9" height="18" fill="#161e2a"/>
 <text x="705" y="404" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
@@ -472,6 +504,7 @@
 <rect x="723" y="390" width="9" height="18" fill="#161e2a"/>
 <text x="723" y="404" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="732" y="390" width="333" height="18" fill="#161e2a"/>
+<text x="732" y="404" fill="#d6dfeb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="333" lengthAdjust="spacingAndGlyphs">                   ·                 </text>
 <rect x="1065" y="390" width="9" height="18" fill="#161e2a"/>
 <text x="1065" y="404" fill="#334256" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="9" lengthAdjust="spacingAndGlyphs">│</text>
 <rect x="1074" y="390" width="18" height="18" fill="#10151f"/>
@@ -563,12 +596,10 @@
 <rect x="12" y="480" width="1080" height="18" fill="#10151f"/>
 <rect x="12" y="498" width="9" height="18" fill="#10151f"/>
 <rect x="21" y="498" width="1062" height="18" fill="#10151f"/>
+<text x="21" y="512" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1062" lengthAdjust="spacingAndGlyphs">Preview · Enter applies · Esc discards                                                                                </text>
 <rect x="1083" y="498" width="9" height="18" fill="#10151f"/>
-<rect x="12" y="516" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="516" width="1062" height="18" fill="#10151f"/>
-<text x="21" y="530" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1062" lengthAdjust="spacingAndGlyphs">e edit   ? help   q quit                                                                                              </text>
-<rect x="1083" y="516" width="9" height="18" fill="#10151f"/>
-<rect x="12" y="534" width="9" height="18" fill="#10151f"/>
-<rect x="21" y="534" width="1062" height="18" fill="#10151f"/>
-<rect x="1083" y="534" width="9" height="18" fill="#10151f"/>
+<rect x="12" y="516" width="1080" height="18" fill="#10151f"/>
+<text x="12" y="530" fill="#d6dfeb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1080" lengthAdjust="spacingAndGlyphs"> Enter apply  Esc discard                                                                                               </text>
+<rect x="12" y="534" width="1080" height="18" fill="#10151f"/>
+<text x="12" y="548" fill="#d6dfeb" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1080" lengthAdjust="spacingAndGlyphs"> Arrows move  h/l width  k/j height                                                                                     </text>
 </svg>

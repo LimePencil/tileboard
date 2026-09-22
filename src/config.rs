@@ -15,6 +15,8 @@ use crate::{grid::Placement, tiles::Registry};
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub version: u32,
+    #[serde(default)]
+    pub theme: crate::theme::Theme,
     pub profiles: Vec<Profile>,
 }
 
@@ -45,6 +47,8 @@ pub struct TileConfig {
     pub title: String,
     #[serde(default = "default_accent")]
     pub accent: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub refresh_ms: Option<u64>,
     pub placement: Placement,
     #[serde(default)]
     pub options: toml::Table,
@@ -238,6 +242,12 @@ impl Default for Config {
                 _ => "green",
             }
             .into(),
+            refresh_ms: Some(match kind {
+                "memory" => 2000,
+                "storage" => 10000,
+                "system" => 5000,
+                _ => 1000,
+            }),
             placement: Placement {
                 column,
                 row,
@@ -260,6 +270,7 @@ impl Default for Config {
         };
         Self {
             version: 1,
+            theme: crate::theme::Theme::default(),
             profiles: vec![
                 Profile {
                     min_height: 18,

@@ -4,11 +4,11 @@ A Rust terminal dashboard with a snapping grid, spanning tiles, and layouts you 
 
 Six built-in tiles cover CPU, memory and swap, network throughput, storage, local time, and system uptime. Tiles are ordinary Rust modules compiled into the application. Layouts, titles, colors, and tile settings live in TOML and can change without rebuilding.
 
-![Tileboard at 80×24, rendered from the actual UI with sample data](docs/previews/compact.svg)
+![Tileboard at 120×30, rendered from the actual UI with sample data](docs/previews/wide.svg)
 
-[Wide layout](docs/previews/wide.svg) · [Small layout](docs/previews/small.svg) · [Settings](docs/previews/settings.svg)
+[Compact](docs/previews/compact.svg) · [Small](docs/previews/small.svg) · [Detailed](docs/previews/detail.svg) · [Amber](docs/previews/amber.svg) · [Monochrome](docs/previews/mono.svg) · [Editor](docs/previews/editor.svg) · [Settings](docs/previews/settings.svg)
 
-Soft accent colors, muted borders, padded cards, and slim usage bars keep the dashboard readable. Previews use sample data; live tiles display your machine's metrics.
+Slate, amber, and monochrome themes use muted borders, padded cards, and slim usage bars. Larger tiles show oversized values, memory/network history graphs, and per-core CPU bars. Editing adds dotted grid guides and shaded placement previews; success notices fade after four seconds. Previews use sample data; live tiles display your machine's metrics.
 
 ## Run
 
@@ -41,7 +41,7 @@ tileboard --print-default-config
 
 ## Edit your dashboard
 
-Press **e** to start an edit session. The shown profile stays pinned while editing, including when the terminal changes size. Changes affect that profile only. Press **p** to work on another profile. A dot next to EDIT indicates unsaved changes; undo returns to the profile and tile affected by the edit.
+Press **e** to start an edit session. The shown profile stays pinned while editing, including when the terminal changes size. Tile changes affect that profile only; the theme applies to the whole dashboard. Press **p** to work on another profile. A dot next to EDIT indicates unsaved changes; undo returns to the profile and tile affected by the edit.
 
 | Control | Action |
 | --- | --- |
@@ -55,7 +55,8 @@ Press **e** to start an edit session. The shown profile stays pinned while editi
 | Drag bottom-right ◢ | Resize a tile |
 | a | Add a tile to a readable empty area |
 | d / Delete | Remove the selected tile |
-| t | Edit title, accent, and tile-specific options |
+| t | Edit title, accent, tile-specific options, and refresh interval |
+| c | Cycle slate, amber, and monochrome themes |
 | u | Undo an applied edit (up to 100 changes) |
 | p | Cycle responsive profiles |
 | s | Save all profiles and leave edit mode |
@@ -85,6 +86,7 @@ All rules, placements, and visible tiles remain user-defined. The small profiles
 
 ```toml
 version = 1
+theme = "slate" # Also: "amber", "mono"
 
 [[profiles]]
 name = "wide"
@@ -103,6 +105,7 @@ id = "cpu-main"
 kind = "cpu"
 title = "CPU usage"
 accent = "cyan"
+refresh_ms = 1000
 [profiles.tiles.placement]
 column = 0
 row = 0
@@ -120,10 +123,25 @@ Positions start at zero. A tile may span any number of cells within its grid. Ea
 
 Grid dimensions and responsive rules are edited in TOML; tile placement and settings are also editable in the UI. Tiles below their minimum readable size show a compact placeholder. Terminals smaller than 26×10 show a resize prompt. There is no automatic rearranging, scrolling, or hidden collision resolution.
 
+## Tile refresh intervals
+
+Every tile instance has its own schedule. Press **e**, select a tile with **Tab**, press **t**, and edit **Refresh interval (ms)**. **Shift+Tab** from the title jumps to that field. Press **Enter** to apply, then **s** to save. You can also set `refresh_ms` in that tile's TOML table.
+
+| Tile | Default interval |
+| --- | --- |
+| CPU, clock, network | 1 second |
+| Memory | 2 seconds |
+| System | 5 seconds |
+| Storage | 10 seconds |
+
+Intervals accept whole milliseconds from **250 to 86,400,000** (24 hours). Omitting `refresh_ms` uses the tile author's default. The bottom border shows the configured interval.
+
+Each tile keeps its own last sample and history; redrawing or refreshing another tile does not change it. Only the visible profile requests updates. A tile samples when first shown, then waits its configured interval after each delivered update; polling and collection add some delay. Overdue tiles resume once without catch-up bursts. Changing its interval or data options restarts that tile's sampling state. Simultaneously due tiles can share system collection, while keeping independent displayed snapshots. A request taking over five seconds shows “delayed”; a deliberately long interval does not.
+
 ## Write a Rust tile
 
 1. Add a module under `src/tiles/` implementing `Tile`.
-2. Supply a `TileDefinition` with a unique kind, factory, configuration fields, and validator.
+2. Supply a `TileDefinition` with a unique kind, factory, configuration fields, validator, `default_refresh_ms`, and required metric `sources`.
 3. Register it in `Registry::builtin()` in `src/tiles/mod.rs`.
 4. Rebuild with Cargo. The tile appears in the **Add tile** menu.
 
@@ -132,7 +150,7 @@ The existing [clock tile](src/tiles/clock.rs) is a small example. The [CPU tile]
 ```rust,ignore
 impl Tile for MyTile {
     fn update(&mut self, config: &TileConfig, metrics: &Metrics) {
-        // Update state when the shared system sample changes.
+        // Update state on this tile instance's configured refresh schedule.
     }
 
     fn render(
@@ -147,6 +165,8 @@ impl Tile for MyTile {
 }
 ```
 
+`sources` declares the needed `metrics::Source` values, such as `&[Source::Cpu]`; the worker returns only those sources. Use `&[]` for a self-contained tile such as the clock, which updates without worker I/O.
+
 The host draws the title/border and supplies the tile's inner rectangle. Draw only within that rectangle. `minimum_size()` includes the surrounding border. Configurable tile options are strings, exposed through the settings form. Keep `update` and `render` quick; custom network or disk work belongs on a worker thread. Tiles are trusted application code and are not isolated from crashes. The optional `handle_key` hook is reserved for future interaction; the current dashboard does not dispatch input to tiles.
 
 ## Development
@@ -157,17 +177,17 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --all-targets
 ```
 
-System data comes from `sysinfo` on a worker thread. CPU, memory, network, and uptime are sampled roughly each second after an initial warm-up; disks refresh about every 10 seconds. Network throughput uses byte counter deltas divided by actual elapsed time, and resets its baseline when an interface appears or its counters reset. Auto selection reports one interface, avoiding the double-counting caused by adding physical, virtual, and VPN adapters. Memory usage is total minus available memory; cached/reclaimable memory is treated as available by the OS. Time follows the local clock. Storage lists mounted filesystems individually instead of summing them, since mounts can share backing devices. Missing mounts and delayed metrics are displayed explicitly.
+System data comes from `sysinfo` on a worker thread. Sources are collected only when requested by a due tile. CPU sampling warms up once and shares a recent sample if requests are closer than the OS sampling minimum. Each network tile calculates throughput from byte counter deltas divided by its own actual elapsed sample time (two samples are needed initially), and resets its baseline when an interface appears or its counters reset. Auto selection reports one interface, avoiding the double-counting caused by adding physical, virtual, and VPN adapters. Memory usage is total minus available memory; cached/reclaimable memory is treated as available by the OS. Time follows the local clock. Storage lists mounted filesystems individually instead of summing them, since mounts can share backing devices. Missing mounts and delayed metrics are displayed explicitly.
 
 Source structure:
 
 - `config.rs`: TOML schema, profile rules, validation, atomic saves.
 - `grid.rs`: spanning placement, collision checks, terminal/grid coordinate mapping.
-- `app.rs`: editor transactions, previews, undo, keyboard/mouse handling.
+- `app.rs`: independent tile schedules/caches, editor transactions, previews, undo, keyboard/mouse handling.
 - `ui.rs`: dashboard and editor rendering.
 - `metrics.rs`: background system sampling.
 - `tiles/`: registry, tile API, and built-in implementations.
-- `theme.rs`: shared colors and byte formatting.
+- `theme.rs`: theme presets, shared colors, byte and interval formatting.
 
 For UI verification and review notes, see [docs/ux-review.md](docs/ux-review.md). Reproduce the real-terminal checks on Linux/macOS with Python 3.11+ and tmux:
 

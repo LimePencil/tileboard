@@ -14,6 +14,12 @@ Reviewed the running application in a real tmux terminal and rendered the same U
 | Bright borders and solid bars competed with the content | Shared slate palette, muted borders, soft accents, gutters, padding, slim gauges | Visual inspection of wide, compact, small, and settings previews |
 | Empty storage data looked permanently “loading” | Separate loading, unavailable mount, and no-mount states | Render paths distinguish initial and collected snapshots |
 
+## Visual and refresh improvements
+
+Larger cards display oversized values, memory/network histories, and per-core CPU bars. Shared border annotations show each tile's interval. The editor uses a double border for selection, dotted empty cells, and shaded valid/blocked previews with span dimensions. Save/reload notices fade while errors remain visible. Slate, amber, and monochrome themes participate in the existing save/undo/cancel flow.
+
+Each visible tile independently schedules collection and retains its last snapshot. The refresh field accepts 250 ms through 24 hours; defaults vary by metric. Pending requests are deduplicated, and generation checks reject responses from replaced configurations. Network rate calculations use each instance's own sampling window. UI redraws never advance a tile's sample.
+
 ## New useful tiles
 
 - **Memory:** usage percentage, used/total RAM, available memory, and swap usage (including swap disabled).
@@ -34,11 +40,11 @@ cargo run --locked --example preview -- docs/previews
 cargo build --release --locked
 ```
 
-The 22 Rust tests cover geometry, config preservation, responsive selection, editor transactions, mouse resizing/collisions, Unicode fields, new tile values/unavailable states, network counter resets, and legacy configurations.
+The 31 Rust tests cover geometry, config preservation, responsive selection, editor transactions, mouse resizing/collisions, Unicode fields, new tile values/unavailable states, network counter resets, legacy configurations, independent instance deadlines, paused profiles, stale response rejection, per-instance network rates, interval validation/persistence, themes, and transient notices.
 
-The tmux smoke script creates an isolated terminal and temporary config, then exercises six live tiles, five terminal shapes, blocked moves, mouse dragging, settings/paste, save/cancel, adding a network tile, a missing interface, recovery from a bad config reload, and clean exit.
+The tmux smoke script creates an isolated terminal and temporary config, then exercises six live tiles, five terminal shapes, blocked moves, mouse dragging, settings/paste, refresh interval and theme persistence, save/cancel, adding a network tile, a missing interface, recovery from a bad config reload, independent 250 ms and 4 s clocks, and clean exit.
 
-Visual review sizes: **120×30**, **80×24**, **42×28**, and **38×16**. Additional layout/readability checks: **120×12**, **38×40**, and **26×10**, plus tiny windows that display the resize prompt. Full keyboard/mouse runtime checks were performed on Linux. macOS ARM64 and Windows x86-64 were checked with `cargo check --all-targets` against their targets; those checks do not execute the app on those operating systems.
+Visual review sizes: **120×44**, **120×30** (slate, amber, monochrome, and edit preview), **80×24**, **42×28**, and **38×16**. Additional layout/readability checks: **120×12**, **38×40**, and **26×10**, plus tiny windows that display the resize prompt. Full keyboard/mouse runtime checks were performed on Linux. macOS ARM64 and Windows x86-64 were checked with `cargo check --all-targets` against their targets; those checks do not execute the app on those operating systems.
 
 The SVGs in [previews](previews/) are generated from Ratatui's actual rendered cell buffer with fixed sample metrics. They contain no live machine details. Font rendering may differ slightly from your terminal.
 

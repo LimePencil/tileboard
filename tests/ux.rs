@@ -22,6 +22,8 @@ fn app() -> App {
             swap_used: 0,
         }),
         networks: vec![NetworkUsage {
+            received: 0,
+            transmitted: 0,
             name: "eth0".into(),
             rates: Some((1048576.0, 8192.0)),
         }],
@@ -31,6 +33,7 @@ fn app() -> App {
             available: 60 << 30,
         }],
         system: Some(SystemInfo {
+            logical_cpus: 8,
             hostname: "workstation".into(),
             os: "Example OS".into(),
             uptime: 90061,
@@ -98,8 +101,10 @@ fn new_tiles_show_actual_values_and_distinguish_missing_data() {
     network.options.insert("interface".into(), "missing".into());
     assert!(screen(&mut app, 120, 32).contains("Interface unavailable"));
     app.metrics.memory = None;
+    app.update_metrics(app.metrics.clone());
     assert!(screen(&mut app, 120, 32).contains("Memory unavailable"));
     app.metrics.ready = false;
+    app.update_metrics(app.metrics.clone());
     assert!(screen(&mut app, 120, 32).contains("Sampling memory"));
 }
 

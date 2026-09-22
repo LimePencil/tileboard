@@ -5,6 +5,7 @@ Requires Python 3.11+ and tmux on Linux/macOS.
 """
 import os
 import pathlib
+import re
 import shlex
 import subprocess
 import tempfile
@@ -56,7 +57,8 @@ def main():
         tmux('new-session', '-d', '-s', 'dashboard', '-x', '120', '-y', '32', command)
         try:
             tmux('set-option', '-g', 'status', 'off')
-            screen = wait_for('logical CPUs')
+            wait_for('logical CPUs')
+            screen = wait_for('receive')
             for title in ['Memory', 'Network', 'System', 'Storage', 'Local time']:
                 assert title in screen
             assert 'available' in screen and 'receive' in screen and 'Up ' in screen
@@ -111,6 +113,15 @@ def main():
             keys('t', 'Tab', 'Tab', 'C-u', 'Enter', 's')
             wait_for('Saved')
             assert len(tomllib.loads(config.read_text())['profiles'][0]['tiles']) == 6
+            # Per-tile interval and theme settings persist independently.
+            keys('e', 't', 'BTab', 'C-u')
+            paste('5000')
+            keys('Enter', 'c', 's')
+            wait_for('Saved')
+            saved = tomllib.loads(config.read_text())
+            assert saved['profiles'][0]['tiles'][0]['refresh_ms'] == 5000
+            assert saved['theme'] == 'amber'
+            assert '5s' in capture()
             # Reload errors preserve the live layout and the invalid external file.
             config.write_text('broken = [')
             keys('r')
@@ -119,7 +130,38 @@ def main():
             assert 'New My 한글 CPU' in capture()
             keys('q')
             assert subprocess.run(BASE + ['has-session', '-t', 'dashboard'], capture_output=True).returncode != 0
-            print('PASS: six live tiles, five responsive shapes, readable controls, collision preview, mouse move, save, Unicode input, add/settings, cancel, reload failure, clean exit')
+            # Two instances of the same tile must visibly keep separate schedules.
+            clocks = 'version = 1\n[[profiles]]\nname = "clocks"\ncolumns = 2\nrows = 1\n'
+            for column, name, interval in [(0, 'Fast', 250), (1, 'Slow', 4000)]:
+                clocks += f'''\n[[profiles.tiles]]
+id = "{name}"
+kind = "clock"
+title = "{name}"
+accent = "cyan"
+refresh_ms = {interval}
+[profiles.tiles.placement]
+column = {column}
+row = 0
+column_span = 1
+row_span = 1
+'''
+            config.write_text(clocks)
+            tmux('new-session', '-d', '-s', 'dashboard', '-x', '80', '-y', '10', command)
+            tmux('set-option', '-g', 'status', 'off')
+            initial = re.findall(r'\d{2}:\d{2}:\d{2}', wait_for('Slow'))
+            assert len(initial) == 2, capture()
+            time.sleep(1.4)
+            later = re.findall(r'\d{2}:\d{2}:\d{2}', capture())
+            assert later[0] != initial[0] and later[1] == initial[1], (initial, later)
+            deadline = time.monotonic() + 5
+            while time.monotonic() < deadline:
+                later = re.findall(r'\d{2}:\d{2}:\d{2}', capture())
+                if later[1] != initial[1]:
+                    break
+                time.sleep(.1)
+            assert later[1] != initial[1], (initial, later)
+            keys('q')
+            print('PASS: six live tiles, five responsive shapes, readable controls, collision preview, mouse move, save, Unicode input, add/settings, independent clock intervals, themes, cancel, reload failure, clean exit')
         finally:
             subprocess.run(BASE + ['kill-server'], capture_output=True)
 

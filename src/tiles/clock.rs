@@ -1,4 +1,4 @@
-use super::{OptionField, Tile, TileDefinition, accent, option};
+use super::{OptionField, Tile, TileDefinition, accent, option, visuals::big_value};
 use crate::{config::TileConfig, metrics::Metrics, theme};
 use anyhow::ensure;
 use chrono::format::{Item, StrftimeItems};
@@ -15,6 +15,8 @@ struct Clock;
 pub fn definition() -> TileDefinition {
     TileDefinition {
         kind: "clock",
+        default_refresh_ms: 1000,
+        sources: &[],
         name: "Local time",
         create: || Box::new(Clock),
         fields: &[OptionField {
@@ -38,6 +40,32 @@ pub fn definition() -> TileDefinition {
 
 impl Tile for Clock {
     fn render(&self, frame: &mut Frame, area: Rect, config: &TileConfig, metrics: &Metrics) {
+        let formatted = metrics
+            .now
+            .format(option(config, "format", "%H:%M:%S"))
+            .to_string();
+        let color = accent(&config.accent).unwrap_or(theme::PURPLE);
+        if area.height >= 6 {
+            let top = area.y + area.height.saturating_sub(6) / 2;
+            if big_value(
+                frame,
+                Rect::new(area.x, top, area.width, 3),
+                &formatted,
+                color,
+                true,
+            ) {
+                frame.render_widget(
+                    Paragraph::new(vec![
+                        Line::from(metrics.now.format("%a, %d %b %Y").to_string()),
+                        Line::from(metrics.now.format("Local · UTC%:z").to_string())
+                            .style(Style::default().fg(theme::MUTED)),
+                    ])
+                    .alignment(Alignment::Center),
+                    Rect::new(area.x, top + 4, area.width, 2),
+                );
+                return;
+            }
+        }
         let lines = vec![
             Line::from(
                 metrics

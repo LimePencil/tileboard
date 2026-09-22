@@ -12,6 +12,8 @@ struct SystemTile;
 pub fn definition() -> TileDefinition {
     TileDefinition {
         kind: "system",
+        default_refresh_ms: 5000,
+        sources: &[crate::metrics::Source::System],
         name: "System",
         create: || Box::new(SystemTile),
         fields: &[],
@@ -48,7 +50,7 @@ impl Tile for SystemTile {
             ),
             Line::from(system.hostname.clone()),
             Line::from(system.os.clone()).style(Style::default().fg(theme::MUTED)),
-            Line::from(format!("{} logical CPUs", metrics.cores.len()))
+            Line::from(format!("{} logical CPUs", system.logical_cpus))
                 .style(Style::default().fg(theme::MUTED)),
         ];
         frame.render_widget(Paragraph::new(lines), area);

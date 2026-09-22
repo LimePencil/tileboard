@@ -28,7 +28,8 @@ pub const HELP_LINES: &[&str] = &[
     "Enter: apply preview · Esc: discard preview",
     "Drag a tile to move; drag ◢ to resize",
     "a add · d delete · t settings · u undo",
-    "p: edit next responsive profile",
+    "p: edit next responsive profile · c: cycle theme",
+    "Refresh interval: milliseconds, 250–86400000",
     "s: save all edits and return to live",
     "Esc without a preview: cancel entire session",
     "",
@@ -38,7 +39,7 @@ pub const HELP_LINES: &[&str] = &[
     "Backspace/Delete: remove text · paste supported",
     "Enter: apply · Esc: cancel settings",
     "",
-    "Profiles are independent. Only the shown profile changes.",
+    "Tile edits affect this profile; themes apply everywhere.",
     "Edit grid dimensions and resize rules in TOML.",
     "Ctrl+c exits, discarding unsaved edits.",
     "",
@@ -57,8 +58,10 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             Paragraph::new("Tileboard\nEnlarge to 26 × 10\nCtrl+c quit").wrap(Wrap { trim: true }),
             area,
         );
+        app.config.theme.apply(frame.buffer_mut());
         return;
     }
+    let status = app.visible_status(std::time::Instant::now()).to_string();
     let profile = &app.config.profiles[app.profile];
     let dirty = app.is_dirty();
     let header = Line::from(vec![
@@ -123,12 +126,12 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
                     column_span: 1,
                     row_span: 1,
                 });
-                frame.render_widget(
-                    Block::bordered()
-                        .border_type(BorderType::Rounded)
-                        .border_style(Style::default().fg(theme::BORDER)),
-                    rect,
-                );
+                if !rect.is_empty() {
+                    frame.render_widget(
+                        Paragraph::new("·").style(Style::default().fg(theme::BORDER)),
+                        Rect::new(rect.x, rect.y, 1, 1),
+                    );
+                }
             }
         }
     }
@@ -163,8 +166,32 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         } else {
             format!(" {} ", config.title)
         };
+        let definition = app.registry.get(&config.kind).unwrap();
+        let interval = theme::interval(config.refresh_ms.unwrap_or(definition.default_refresh_ms));
+        let key = (profile.name.clone(), config.id.clone(), config.kind.clone());
+        let delayed = app
+            .tiles
+            .get(&key)
+            .and_then(|state| state.pending_since)
+            .is_some_and(|time| time.elapsed().as_secs() >= 5);
+        let annotation = if delayed {
+            " delayed ".into()
+        } else {
+            format!(" {interval} ")
+        };
         let block = Block::bordered()
-            .border_type(BorderType::Rounded)
+            .title_bottom(
+                Line::from(annotation).style(Style::default().fg(if delayed {
+                    theme::RED
+                } else {
+                    theme::MUTED
+                })),
+            )
+            .border_type(if selected {
+                BorderType::Double
+            } else {
+                BorderType::Rounded
+            })
             .title(Span::styled(
                 title,
                 Style::default().fg(color).add_modifier(Modifier::BOLD),
@@ -179,14 +206,14 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         frame.render_widget(block, rect);
         let key = (profile.name.clone(), config.id.clone(), config.kind.clone());
         if let Some(tile) = app.tiles.get(&key) {
-            let minimum = tile.minimum_size();
+            let minimum = tile.tile.minimum_size();
             if rect.width < minimum.0 || rect.height < minimum.1 {
                 frame.render_widget(
                     Paragraph::new("Enlarge tile").style(Style::default().fg(theme::MUTED)),
                     inner,
                 );
             } else {
-                tile.render(frame, inner, config, &app.metrics);
+                tile.tile.render(frame, inner, config, &tile.metrics);
             }
         }
         if selected && rect.width > 2 && rect.height > 2 {
@@ -202,20 +229,21 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             Block::new()
                 .borders(Borders::ALL)
                 .border_type(BorderType::Double)
-                .title(if valid {
-                    " Preview · Enter "
+                .title(format!(
+                    " {} {}×{} ",
+                    if valid { "Preview" } else { "Blocked" },
+                    candidate.column_span,
+                    candidate.row_span
+                ))
+                .style(Style::default().bg(if valid {
+                    theme::PREVIEW_OK
                 } else {
-                    " Blocked "
-                })
+                    theme::PREVIEW_BAD
+                }))
                 .border_style(Style::default().fg(if valid { theme::GREEN } else { theme::RED })),
             app.tile_rect(candidate),
         );
     }
-    let status = if app.metrics.sampled_at.elapsed().as_secs() > 5 {
-        format!("Metrics delayed · {}", app.status)
-    } else {
-        app.status.clone()
-    };
     frame.render_widget(
         Paragraph::new(status).style(Style::default().fg(
             if app.candidate.is_some() && !app.candidate_valid() {
@@ -237,12 +265,16 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             "s save  Esc cancel  ? help\nTab select  a add  t settings"
         }
         None if app.editing => {
-            "Tab select  arrows move  h/j/k/l resize  a add  t settings  d delete\ns save  Esc cancel  Enter apply  u undo  p profile  ? help"
+            "Tab select  arrows move  h/j/k/l resize  a add  t settings  d delete\ns save  Esc cancel  Enter apply  u undo  p profile  c theme  ? help"
         }
         _ => "e edit   ? help   q quit",
     };
     frame.render_widget(
-        Paragraph::new(footer).style(Style::default().fg(theme::TEXT)),
+        Paragraph::new(footer).style(Style::default().fg(if app.editing || app.modal.is_some() {
+            theme::TEXT
+        } else {
+            theme::MUTED
+        })),
         Rect::new(area.x + 1, area.bottom() - 2, area.width - 2, 2),
     );
     if let Some(modal) = &app.modal {
@@ -251,6 +283,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             .set_style(app.board_area(), Style::default().fg(theme::BORDER));
         draw_modal(frame, app, modal);
     }
+    app.config.theme.apply(frame.buffer_mut());
 }
 
 /// Choose a grapheme boundary that keeps the insertion point inside the field.

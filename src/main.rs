@@ -1,7 +1,7 @@
 use std::{
     io::{self, IsTerminal},
     path::PathBuf,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 use anyhow::{Context, Result, ensure};
@@ -69,10 +69,14 @@ fn main() -> Result<()> {
     }));
     execute!(io::stdout(), EnableMouseCapture, EnableBracketedPaste)?;
     while !app.quit {
-        if let Some(metrics) = collector.latest() {
-            app.update_metrics(metrics);
+        let size = terminal.size()?;
+        app.resize(ratatui::layout::Rect::new(0, 0, size.width, size.height));
+        for result in collector.drain() {
+            app.apply_sample(result, Instant::now());
         }
-        app.metrics.now = chrono::Local::now();
+        for request in app.refresh_due(Instant::now()) {
+            collector.request(request)?;
+        }
         terminal.draw(|frame| ui::draw(frame, &mut app))?;
         if event::poll(Duration::from_millis(100))? {
             match event::read()? {

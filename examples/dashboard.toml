@@ -1,4 +1,5 @@
 version = 1
+theme = "slate"
 
 [[profiles]]
 name = "wide"
@@ -12,6 +13,7 @@ id = "cpu"
 kind = "cpu"
 title = "CPU usage"
 accent = "cyan"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 0
@@ -26,6 +28,7 @@ id = "clock"
 kind = "clock"
 title = "Local time"
 accent = "magenta"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 4
@@ -40,6 +43,7 @@ id = "memory"
 kind = "memory"
 title = "Memory"
 accent = "blue"
+refresh_ms = 2000
 
 [profiles.tiles.placement]
 column = 2
@@ -54,6 +58,7 @@ id = "storage"
 kind = "storage"
 title = "Storage"
 accent = "green"
+refresh_ms = 10000
 
 [profiles.tiles.placement]
 column = 0
@@ -68,6 +73,7 @@ id = "network"
 kind = "network"
 title = "Network"
 accent = "cyan"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 2
@@ -82,6 +88,7 @@ id = "system"
 kind = "system"
 title = "System"
 accent = "yellow"
+refresh_ms = 5000
 
 [profiles.tiles.placement]
 column = 4
@@ -103,6 +110,7 @@ id = "cpu"
 kind = "cpu"
 title = "CPU usage"
 accent = "cyan"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 0
@@ -117,6 +125,7 @@ id = "clock"
 kind = "clock"
 title = "Local time"
 accent = "magenta"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 2
@@ -131,6 +140,7 @@ id = "memory"
 kind = "memory"
 title = "Memory"
 accent = "blue"
+refresh_ms = 2000
 
 [profiles.tiles.placement]
 column = 0
@@ -145,6 +155,7 @@ id = "network"
 kind = "network"
 title = "Network"
 accent = "cyan"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 2
@@ -159,6 +170,7 @@ id = "storage"
 kind = "storage"
 title = "Storage"
 accent = "green"
+refresh_ms = 10000
 
 [profiles.tiles.placement]
 column = 0
@@ -173,6 +185,7 @@ id = "system"
 kind = "system"
 title = "System"
 accent = "yellow"
+refresh_ms = 5000
 
 [profiles.tiles.placement]
 column = 2
@@ -194,6 +207,7 @@ id = "cpu"
 kind = "cpu"
 title = "CPU usage"
 accent = "cyan"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 0
@@ -208,6 +222,7 @@ id = "clock"
 kind = "clock"
 title = "Local time"
 accent = "magenta"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 0
@@ -222,6 +237,7 @@ id = "memory"
 kind = "memory"
 title = "Memory"
 accent = "blue"
+refresh_ms = 2000
 
 [profiles.tiles.placement]
 column = 0
@@ -236,6 +252,7 @@ id = "network"
 kind = "network"
 title = "Network"
 accent = "cyan"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 0
@@ -250,6 +267,7 @@ id = "storage"
 kind = "storage"
 title = "Storage"
 accent = "green"
+refresh_ms = 10000
 
 [profiles.tiles.placement]
 column = 0
@@ -264,6 +282,7 @@ id = "system"
 kind = "system"
 title = "System"
 accent = "yellow"
+refresh_ms = 5000
 
 [profiles.tiles.placement]
 column = 0
@@ -285,6 +304,7 @@ id = "cpu"
 kind = "cpu"
 title = "CPU usage"
 accent = "cyan"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 0
@@ -299,6 +319,7 @@ id = "clock"
 kind = "clock"
 title = "Local time"
 accent = "magenta"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 0
@@ -313,6 +334,7 @@ id = "memory"
 kind = "memory"
 title = "Memory"
 accent = "blue"
+refresh_ms = 2000
 
 [profiles.tiles.placement]
 column = 0
@@ -334,6 +356,7 @@ id = "cpu"
 kind = "cpu"
 title = "CPU usage"
 accent = "cyan"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 0
@@ -348,6 +371,7 @@ id = "clock"
 kind = "clock"
 title = "Local time"
 accent = "magenta"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 4
@@ -362,6 +386,7 @@ id = "memory"
 kind = "memory"
 title = "Memory"
 accent = "blue"
+refresh_ms = 2000
 
 [profiles.tiles.placement]
 column = 2
@@ -383,6 +408,7 @@ id = "cpu"
 kind = "cpu"
 title = "CPU usage"
 accent = "cyan"
+refresh_ms = 1000
 
 [profiles.tiles.placement]
 column = 0

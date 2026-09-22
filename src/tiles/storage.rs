@@ -16,6 +16,8 @@ struct Storage;
 pub fn definition() -> TileDefinition {
     TileDefinition {
         kind: "storage",
+        default_refresh_ms: 10000,
+        sources: &[crate::metrics::Source::Storage],
         name: "Storage",
         create: || Box::new(Storage),
         fields: &[OptionField {

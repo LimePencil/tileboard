@@ -1,10 +1,6 @@
 use std::{
     collections::BTreeMap,
-    sync::{
-        Arc,
-        atomic::{AtomicBool, Ordering},
-        mpsc::{self, Receiver},
-    },
+    sync::mpsc::{self, Receiver, Sender},
     thread,
     time::{Duration, Instant},
 };
@@ -23,6 +19,8 @@ pub struct MemoryUsage {
 #[derive(Debug, Clone)]
 pub struct NetworkUsage {
     pub name: String,
+    pub received: u64,
+    pub transmitted: u64,
     /// Bytes per second; None until two valid counter samples are available.
     pub rates: Option<(f64, f64)>,
 }
@@ -32,15 +30,16 @@ pub struct SystemInfo {
     pub hostname: String,
     pub os: String,
     pub uptime: u64,
+    pub logical_cpus: usize,
 }
 
 #[derive(Default)]
-struct NetworkSampler {
+pub struct NetworkSampler {
     previous: BTreeMap<String, (u64, u64)>,
 }
 
 impl NetworkSampler {
-    fn sample(
+    pub fn sample(
         &mut self,
         counters: BTreeMap<String, (u64, u64)>,
         elapsed: Duration,
@@ -60,6 +59,8 @@ impl NetworkSampler {
                 });
                 NetworkUsage {
                     name: name.clone(),
+                    received: rx,
+                    transmitted: tx,
                     rates,
                 }
             })
@@ -105,99 +106,156 @@ impl Default for Metrics {
     }
 }
 
-/// System calls run off the event loop. A bounded channel prevents unbounded backlog.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Source {
+    Cpu,
+    Memory,
+    Network,
+    Storage,
+    System,
+}
+
+pub type TileKey = (String, String, String);
+
+#[derive(Debug, Clone)]
+pub struct SampleRequest {
+    pub key: TileKey,
+    pub generation: u64,
+    pub sources: &'static [Source],
+}
+
+pub struct SampleResult {
+    pub request: SampleRequest,
+    pub metrics: Metrics,
+}
+
+/// The UI requests only due tiles. There is at most one outstanding request per instance.
+/// Requests arriving together share source collection, but each tile keeps its own snapshot.
 pub struct Collector {
-    receiver: Receiver<Metrics>,
-    stop: Arc<AtomicBool>,
+    sender: Sender<SampleRequest>,
+    receiver: Receiver<SampleResult>,
 }
 
 impl Collector {
     pub fn start() -> Self {
-        let (sender, receiver) = mpsc::sync_channel(1);
-        let stop = Arc::new(AtomicBool::new(false));
-        let worker_stop = Arc::clone(&stop);
+        let (sender, requests) = mpsc::channel::<SampleRequest>();
+        let (results, receiver) = mpsc::channel();
         thread::spawn(move || {
             let mut system = System::new();
-            system.refresh_cpu_usage();
-            let mut disks = Disks::new_with_refreshed_list();
-            let mut networks = Networks::new_with_refreshed_list();
-            let mut sampler = NetworkSampler::default();
-            let counters = |networks: &Networks| {
-                networks
+            let mut disks = Disks::new();
+            let mut networks = Networks::new();
+            let mut cache = Metrics::default();
+            let mut cpu_time: Option<Instant> = None;
+            while let Ok(first) = requests.recv() {
+                let mut batch = vec![first];
+                batch.extend(requests.try_iter());
+                let sources: std::collections::BTreeSet<_> = batch
                     .iter()
-                    .map(|(name, data)| {
-                        (
-                            name.clone(),
-                            (data.total_received(), data.total_transmitted()),
-                        )
-                    })
-                    .collect()
-            };
-            sampler.sample(counters(&networks), Duration::ZERO);
-            let mut network_time = Instant::now();
-            let hostname = System::host_name().unwrap_or_else(|| "Unknown host".into());
-            let os = System::long_os_version().unwrap_or_else(|| std::env::consts::OS.into());
-            let mut iteration = 0_u64;
-            while !worker_stop.load(Ordering::Relaxed) {
-                thread::sleep(Duration::from_secs(1));
-                if worker_stop.load(Ordering::Relaxed) {
-                    break;
+                    .flat_map(|request| request.sources.iter().copied())
+                    .collect();
+                let mut network_snapshot = vec![];
+                let mut network_time = Instant::now();
+                for source in sources {
+                    match source {
+                        Source::Cpu => {
+                            if cpu_time.is_none() {
+                                system.refresh_cpu_usage();
+                                thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
+                            }
+                            if cpu_time.is_none_or(|time| {
+                                time.elapsed() >= sysinfo::MINIMUM_CPU_UPDATE_INTERVAL
+                            }) {
+                                system.refresh_cpu_usage();
+                                cpu_time = Some(Instant::now());
+                                cache.cpu =
+                                    (!system.cpus().is_empty()).then(|| system.global_cpu_usage());
+                                cache.cores = system.cpus().iter().map(|c| c.cpu_usage()).collect();
+                            }
+                        }
+                        Source::Memory => {
+                            system.refresh_memory();
+                            cache.memory = (system.total_memory() > 0).then(|| MemoryUsage {
+                                total: system.total_memory(),
+                                available: system.available_memory(),
+                                swap_total: system.total_swap(),
+                                swap_used: system.used_swap(),
+                            });
+                        }
+                        Source::Network => {
+                            networks.refresh(true);
+                            network_time = Instant::now();
+                            network_snapshot = networks
+                                .iter()
+                                .map(|(name, data)| NetworkUsage {
+                                    name: name.clone(),
+                                    received: data.total_received(),
+                                    transmitted: data.total_transmitted(),
+                                    rates: None,
+                                })
+                                .collect();
+                            network_snapshot.sort_by(|a, b| a.name.cmp(&b.name));
+                        }
+                        Source::Storage => {
+                            disks.refresh(true);
+                            cache.disks = disks
+                                .list()
+                                .iter()
+                                .map(|disk| DiskUsage {
+                                    mount: disk.mount_point().display().to_string(),
+                                    total: disk.total_space(),
+                                    available: disk.available_space(),
+                                })
+                                .collect();
+                        }
+                        Source::System => {
+                            cache.system = Some(SystemInfo {
+                                hostname: System::host_name()
+                                    .unwrap_or_else(|| "Unknown host".into()),
+                                os: System::long_os_version()
+                                    .unwrap_or_else(|| std::env::consts::OS.into()),
+                                uptime: System::uptime(),
+                                logical_cpus: thread::available_parallelism()
+                                    .map(usize::from)
+                                    .unwrap_or(0),
+                            });
+                        }
+                    }
                 }
-                system.refresh_cpu_usage();
-                system.refresh_memory();
-                networks.refresh(true);
-                let now = Instant::now();
-                let network_samples =
-                    sampler.sample(counters(&networks), now.duration_since(network_time));
-                network_time = now;
-                if iteration.is_multiple_of(10) {
-                    disks.refresh(true);
-                }
-                iteration += 1;
-                let snapshot = Metrics {
-                    ready: true,
-                    cpu: (!system.cpus().is_empty()).then(|| system.global_cpu_usage()),
-                    cores: system.cpus().iter().map(|c| c.cpu_usage()).collect(),
-                    disks: disks
-                        .list()
-                        .iter()
-                        .map(|disk| DiskUsage {
-                            mount: disk.mount_point().display().to_string(),
-                            total: disk.total_space(),
-                            available: disk.available_space(),
-                        })
-                        .collect(),
-                    memory: (system.total_memory() > 0).then(|| MemoryUsage {
-                        total: system.total_memory(),
-                        available: system.available_memory(),
-                        swap_total: system.total_swap(),
-                        swap_used: system.used_swap(),
-                    }),
-                    networks: network_samples,
-                    system: Some(SystemInfo {
-                        hostname: hostname.clone(),
-                        os: os.clone(),
-                        uptime: System::uptime(),
-                    }),
-                    sampled_at: Instant::now(),
-                    now: Local::now(),
-                };
-                if let Err(mpsc::TrySendError::Disconnected(_)) = sender.try_send(snapshot) {
-                    break;
+                for request in batch {
+                    // Do not expose unrelated sources refreshed by a faster tile.
+                    let mut metrics = Metrics {
+                        ready: true,
+                        ..Metrics::default()
+                    };
+                    for source in request.sources {
+                        match source {
+                            Source::Cpu => {
+                                metrics.cpu = cache.cpu;
+                                metrics.cores = cache.cores.clone();
+                            }
+                            Source::Memory => metrics.memory = cache.memory.clone(),
+                            Source::Network => {
+                                metrics.networks = network_snapshot.clone();
+                                metrics.sampled_at = network_time;
+                            }
+                            Source::Storage => metrics.disks = cache.disks.clone(),
+                            Source::System => metrics.system = cache.system.clone(),
+                        }
+                    }
+                    if results.send(SampleResult { request, metrics }).is_err() {
+                        return;
+                    }
                 }
             }
         });
-        Self { receiver, stop }
+        Self { sender, receiver }
     }
 
-    pub fn latest(&self) -> Option<Metrics> {
-        self.receiver.try_iter().last()
+    pub fn request(&self, request: SampleRequest) -> Result<(), mpsc::SendError<SampleRequest>> {
+        self.sender.send(request)
     }
-}
-
-impl Drop for Collector {
-    fn drop(&mut self) {
-        self.stop.store(true, Ordering::Relaxed);
+    pub fn drain(&self) -> impl Iterator<Item = SampleResult> + '_ {
+        self.receiver.try_iter()
     }
 }
 

@@ -5,6 +5,7 @@ mod memory;
 mod network;
 mod storage;
 mod system;
+mod visuals;
 
 use std::collections::BTreeMap;
 
@@ -21,7 +22,7 @@ pub struct OptionField {
 }
 
 pub trait Tile {
-    /// Called after a new shared system sample arrives; keep this nonblocking.
+    /// Called on this tile instance's refresh schedule; keep this nonblocking.
     fn update(&mut self, _config: &TileConfig, _metrics: &Metrics) {}
     fn render(&self, frame: &mut Frame, area: Rect, config: &TileConfig, metrics: &Metrics);
     fn minimum_size(&self) -> (u16, u16) {
@@ -35,6 +36,8 @@ pub trait Tile {
 
 pub struct TileDefinition {
     pub kind: &'static str,
+    pub default_refresh_ms: u64,
+    pub sources: &'static [crate::metrics::Source],
     pub name: &'static str,
     pub create: fn() -> Box<dyn Tile>,
     pub fields: &'static [OptionField],
@@ -79,6 +82,11 @@ impl Registry {
             bail!("Unknown tile kind: {}", config.kind);
         };
         ensure!(!config.title.trim().is_empty(), "Title cannot be empty");
+        ensure!(
+            (250..=86_400_000)
+                .contains(&config.refresh_ms.unwrap_or(definition.default_refresh_ms)),
+            "Refresh must be 250..86400000 milliseconds"
+        );
         ensure!(
             accent(&config.accent).is_some(),
             "Accent must be cyan, magenta, green, yellow, blue, red, or white"

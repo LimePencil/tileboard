@@ -30,12 +30,21 @@ fn main() -> anyhow::Result<()> {
         ("compact", 80, 24, false),
         ("small", 42, 28, false),
         ("settings", 38, 16, true),
+        ("amber", 120, 30, false),
+        ("mono", 120, 30, false),
+        ("detail", 120, 44, false),
+        ("editor", 120, 30, true),
     ] {
         let mut app = App::new(
             Config::default(),
             "preview.toml".into(),
             Registry::builtin(),
         );
+        app.config.theme = match name {
+            "amber" => theme::Theme::Amber,
+            "mono" => theme::Theme::Mono,
+            _ => theme::Theme::Slate,
+        };
         let metrics = Metrics {
             ready: true,
             cpu: Some(24.5),
@@ -48,6 +57,8 @@ fn main() -> anyhow::Result<()> {
                 swap_used: 0,
             }),
             networks: vec![NetworkUsage {
+                received: 0,
+                transmitted: 0,
                 name: "en0".into(),
                 rates: Some((1258291.0, 86016.0)),
             }],
@@ -57,6 +68,7 @@ fn main() -> anyhow::Result<()> {
                 available: 182 << 30,
             }],
             system: Some(SystemInfo {
+                logical_cpus: 8,
                 hostname: "workstation".into(),
                 os: "Linux".into(),
                 uptime: 187320,
@@ -64,22 +76,33 @@ fn main() -> anyhow::Result<()> {
             ..Metrics::default()
         };
         for i in 0..100 {
-            app.update_metrics(Metrics {
-                cpu: Some(18.0 + (i as f32 * 0.5).sin().abs() * 30.0),
-                ..metrics.clone()
-            });
+            let mut sample = metrics.clone();
+            sample.cpu = Some(18.0 + (i as f32 * 0.5).sin().abs() * 30.0);
+            sample.memory.as_mut().unwrap().available =
+                (9 << 30) + ((i as f64 * 0.15).sin().abs() * (2_u64 << 30) as f64) as u64;
+            sample.networks[0].rates = Some((
+                500000.0 + (i as f64 * 0.3).sin().abs() * 2000000.0,
+                30000.0 + (i as f64 * 0.17).cos().abs() * 700000.0,
+            ));
+            app.update_metrics(sample);
         }
         app.update_metrics(metrics);
         app.resize(ratatui::layout::Rect::new(0, 0, width, height));
         if edit {
             app.handle_key(KeyCode::Char('e').into());
+        }
+        if name == "editor" {
+            app.handle_key(KeyCode::Char('h').into());
+        } else if edit {
             app.handle_key(KeyCode::Char('t').into());
             app.handle_key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL));
             app.paste("A long title with a visible ending");
         }
         let mut terminal = Terminal::new(TestBackend::new(width, height))?;
         terminal.draw(|frame| ui::draw(frame, &mut app))?;
-        let cursor = edit.then(|| terminal.get_cursor_position()).transpose()?;
+        let cursor = (name == "settings")
+            .then(|| terminal.get_cursor_position())
+            .transpose()?;
         let buffer = terminal.backend().buffer();
         let mut svg = format!(
             "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"{}\" height=\"{}\" viewBox=\"0 0 {} {}\">\n",
@@ -91,7 +114,7 @@ fn main() -> anyhow::Result<()> {
         writeln!(
             svg,
             "<rect width=\"100%\" height=\"100%\" rx=\"10\" fill=\"{}\"/>",
-            color(theme::BACKGROUND)
+            color(buffer[(0, 0)].bg)
         )?;
         for y in 0..height {
             let mut x = 0;

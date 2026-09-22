@@ -1,4 +1,8 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers, MouseButton, MouseEvent, MouseEventKind};
 use ratatui::layout::Rect;
@@ -7,7 +11,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::{
     config::{Config, TileConfig},
     grid::{Grid, Placement},
-    metrics::Metrics,
+    metrics::{Metrics, NetworkSampler, SampleRequest, SampleResult, Source, TileKey},
     tiles::{Registry, Tile},
 };
 
@@ -48,12 +52,27 @@ fn next_boundary(value: &str, cursor: usize) -> usize {
         .unwrap_or(value.len())
 }
 
+pub struct TileState {
+    pub tile: Box<dyn Tile>,
+    pub metrics: Metrics,
+    pub next_due: Instant,
+    pub pending_since: Option<Instant>,
+    pub generation: u64,
+    pub interval: Duration,
+    config: TileConfig,
+    network: NetworkSampler,
+    network_time: Option<Instant>,
+}
+
 pub struct App {
     pub config: Config,
     pub path: PathBuf,
     pub registry: Registry,
     pub metrics: Metrics,
-    pub tiles: HashMap<(String, String, String), Box<dyn Tile>>,
+    pub tiles: HashMap<TileKey, TileState>,
+    generation: u64,
+    status_seen: String,
+    status_since: Instant,
     pub size: Rect,
     pub editing: bool,
     pub profile: usize,
@@ -147,6 +166,9 @@ impl App {
             registry,
             metrics: Metrics::default(),
             tiles: HashMap::new(),
+            generation: 0,
+            status_seen: String::new(),
+            status_since: Instant::now(),
             size: Rect::default(),
             editing: false,
             profile: 0,
@@ -169,24 +191,132 @@ impl App {
             for config in &profile.tiles {
                 let key = (profile.name.clone(), config.id.clone(), config.kind.clone());
                 keys.insert(key.clone());
-                self.tiles
-                    .entry(key)
-                    .or_insert_with(|| (self.registry.get(&config.kind).unwrap().create)());
+                let definition = self.registry.get(&config.kind).unwrap();
+                let interval = Duration::from_millis(
+                    config.refresh_ms.unwrap_or(definition.default_refresh_ms),
+                );
+                let reset = self.tiles.get(&key).is_none_or(|state| {
+                    state.config.options != config.options || state.interval != interval
+                });
+                if reset {
+                    self.generation += 1;
+                    self.tiles.insert(
+                        key.clone(),
+                        TileState {
+                            tile: (definition.create)(),
+                            metrics: Metrics::default(),
+                            next_due: Instant::now(),
+                            pending_since: None,
+                            generation: self.generation,
+                            interval,
+                            config: config.clone(),
+                            network: NetworkSampler::default(),
+                            network_time: None,
+                        },
+                    );
+                } else if let Some(state) = self.tiles.get_mut(&key) {
+                    state.config = config.clone();
+                }
             }
         }
         self.tiles.retain(|key, _| keys.contains(key));
     }
 
+    /// Inject a complete fixture for previews; production data enters through apply_sample.
     pub fn update_metrics(&mut self, metrics: Metrics) {
         for profile in &self.config.profiles {
             for config in &profile.tiles {
                 let key = (profile.name.clone(), config.id.clone(), config.kind.clone());
-                if let Some(tile) = self.tiles.get_mut(&key) {
-                    tile.update(config, &metrics);
+                if let Some(state) = self.tiles.get_mut(&key) {
+                    state.tile.update(config, &metrics);
+                    state.metrics = metrics.clone();
                 }
             }
         }
         self.metrics = metrics;
+    }
+
+    pub fn refresh_due(&mut self, now: Instant) -> Vec<SampleRequest> {
+        let mut requests = vec![];
+        let profile = &self.config.profiles[self.profile];
+        for config in &profile.tiles {
+            let key = (profile.name.clone(), config.id.clone(), config.kind.clone());
+            let state = self.tiles.get_mut(&key).unwrap();
+            if state.pending_since.is_some() || now < state.next_due {
+                continue;
+            }
+            let definition = self.registry.get(&config.kind).unwrap();
+            if definition.sources.is_empty() {
+                // Clock and self-contained custom tiles never wait for system I/O.
+                state.metrics = Metrics {
+                    ready: true,
+                    ..Metrics::default()
+                };
+                state.tile.update(config, &state.metrics);
+                state.next_due = now + state.interval;
+            } else {
+                state.pending_since = Some(now);
+                requests.push(SampleRequest {
+                    key,
+                    generation: state.generation,
+                    sources: definition.sources,
+                });
+            }
+        }
+        requests
+    }
+
+    pub fn apply_sample(&mut self, mut result: SampleResult, now: Instant) {
+        let Some(state) = self.tiles.get_mut(&result.request.key) else {
+            return;
+        };
+        if state.generation != result.request.generation || state.pending_since.is_none() {
+            return;
+        }
+        if result.request.sources.contains(&Source::Network) {
+            let elapsed = state
+                .network_time
+                .map(|previous| {
+                    result
+                        .metrics
+                        .sampled_at
+                        .saturating_duration_since(previous)
+                })
+                .unwrap_or_default();
+            state.network_time = Some(result.metrics.sampled_at);
+            let counters = result
+                .metrics
+                .networks
+                .iter()
+                .map(|network| {
+                    (
+                        network.name.clone(),
+                        (network.received, network.transmitted),
+                    )
+                })
+                .collect();
+            result.metrics.networks = state.network.sample(counters, elapsed);
+        }
+        state.tile.update(&state.config, &result.metrics);
+        state.metrics = result.metrics;
+        state.pending_since = None;
+        state.next_due = now + state.interval;
+    }
+
+    pub fn visible_status(&mut self, now: Instant) -> &str {
+        if self.status_seen != self.status {
+            self.status_seen = self.status.clone();
+            self.status_since = now;
+        }
+        let expired = (self.status.starts_with("Saved")
+            || self.status.starts_with("Configuration reloaded")
+            || self.status.starts_with("Edit session cancelled"))
+            && now.saturating_duration_since(self.status_since) >= Duration::from_secs(4);
+        if !self.editing && (expired || self.status.starts_with("Press e")) {
+            ""
+        } else {
+            &self.status
+        }
     }
 
     pub fn resize(&mut self, size: Rect) {
@@ -314,6 +444,7 @@ impl App {
                         self.profile = self.config.profile_for(self.size.width, self.size.height);
                         self.sync_tiles();
                         self.status = "Configuration reloaded".into();
+                        self.status_seen.clear();
                     }
                     Err(error) => self.status = format!("Reload failed: {error:#}"),
                 },
@@ -348,6 +479,11 @@ impl App {
             }
             KeyCode::Char('q') => {
                 self.status = "Use s to save or Esc to cancel this edit session".into()
+            }
+            KeyCode::Char('c') => {
+                self.remember();
+                self.config.theme = self.config.theme.next();
+                self.status = format!("Theme: {} · s to save", self.config.theme.name());
             }
             KeyCode::Char('p') => {
                 self.profile = (self.profile + 1) % self.config.profiles.len();
@@ -444,6 +580,12 @@ impl App {
                     .into(),
             ));
         }
+        fields.push((
+            "Refresh interval (ms)".into(),
+            tile.refresh_ms
+                .unwrap_or(self.registry.get(&tile.kind).unwrap().default_refresh_ms)
+                .to_string(),
+        ));
         self.candidate = None;
         let cursor = fields[0].1.len();
         self.modal = Some(Modal::Settings {
@@ -501,6 +643,7 @@ impl App {
                                 title,
                                 accent: "cyan".into(),
                                 placement,
+                                refresh_ms: None,
                                 options: toml::Table::new(),
                             });
                             self.selected = tiles.len() - 1;
@@ -582,10 +725,19 @@ impl App {
                         tile.options
                             .insert(field.key.into(), toml::Value::String(value.clone()));
                     }
+                    match fields.last().unwrap().1.parse::<u64>() {
+                        Ok(milliseconds) => tile.refresh_ms = Some(milliseconds),
+                        Err(_) => {
+                            self.status = "Refresh must be a whole number of milliseconds".into();
+                            self.modal = Some(modal);
+                            return;
+                        }
+                    }
                     match self.registry.validate(&tile) {
                         Ok(()) => {
                             self.remember();
                             self.config.profiles[self.profile].tiles[self.selected] = tile;
+                            self.sync_tiles();
                             self.status = "Tile settings applied · s to save".into();
                             return;
                         }
