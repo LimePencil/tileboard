@@ -159,7 +159,13 @@ fn new_tile_fits_readably_and_bad_settings_leave_original_intact() {
     app.handle_key(KeyCode::Char('e').into());
     app.handle_key(KeyCode::Char('d').into());
     app.handle_key(KeyCode::Char('a').into());
-    for _ in 0..3 {
+    let index = app
+        .registry
+        .list()
+        .iter()
+        .position(|d| d.kind == "network")
+        .unwrap();
+    for _ in 0..index {
         app.handle_key(KeyCode::Down.into());
     }
     app.handle_key(KeyCode::Enter.into());

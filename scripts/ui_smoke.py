@@ -37,7 +37,10 @@ def wait_for(text):
 
 
 def keys(*values):
-    tmux('send-keys', '-t', 'dashboard', *values)
+    for value in values:
+        tmux('send-keys', '-t', 'dashboard', value)
+        if value == 'Escape':
+            time.sleep(.2)
     time.sleep(.18)
 
 
@@ -74,8 +77,11 @@ def main():
             tmux('resize-window', '-t', 'dashboard', '-x', '120', '-y', '32')
             wait_for('wide')
             keys('e', 'Right')
-            wait_for('Blocked')
+            wait_for('Swap with Memory')
+            assert capture().count('swap preview') == 2
             keys('Enter')
+            wait_for('Tiles swapped')
+            keys('u', 'l')
             wait_for('Blocked')
             keys('Escape', 'h', 'Enter')
             # SGR mouse: move the shrunken CPU tile one cell to the right.
@@ -104,7 +110,7 @@ def main():
             assert 'New My 한글 CPU' in capture()
             assert config.read_bytes() == before
             # Replace the network tile through the registry picker and test missing data.
-            keys('e', 'Tab', 'Tab', 'Tab', 'Tab', 'd', 'a', 'Down', 'Down', 'Down', 'Enter')
+            keys('e', 'Tab', 'Tab', 'Tab', 'Tab', 'd', 'a', *(['Down'] * 6), 'Enter')
             wait_for('Tile added')
             keys('t', 'Tab', 'Tab', 'C-u')
             paste('nonexistent-interface')
@@ -113,6 +119,12 @@ def main():
             keys('t', 'Tab', 'Tab', 'C-u', 'Enter', 's')
             wait_for('Saved')
             assert len(tomllib.loads(config.read_text())['profiles'][0]['tiles']) == 6
+            # Replace an existing tile with a calendar, undo, and cancel.
+            keys('e', 'Tab', 'Tab', 'r', 'Down', 'Enter')
+            wait_for('Tile replaced')
+            assert 'Mo Tu We Th Fr Sa Su' in capture()
+            keys('u', 'Escape')
+            wait_for('Edit session cancelled')
             # Per-tile interval and theme settings persist independently.
             keys('e', 't', 'BTab', 'C-u')
             paste('5000')
@@ -161,7 +173,7 @@ row_span = 1
                 time.sleep(.1)
             assert later[1] != initial[1], (initial, later)
             keys('q')
-            print('PASS: six live tiles, five responsive shapes, readable controls, collision preview, mouse move, save, Unicode input, add/settings, independent clock intervals, themes, cancel, reload failure, clean exit')
+            print('PASS: six live tiles, five responsive shapes, readable controls, full-grid swap, blocked resize, replace/undo, mouse move, save, Unicode input, add/settings, independent clock intervals, themes, cancel, reload failure, clean exit')
         finally:
             subprocess.run(BASE + ['kill-server'], capture_output=True)
 

@@ -14,6 +14,12 @@ Reviewed the running application in a real tmux terminal and rendered the same U
 | Bright borders and solid bars competed with the content | Shared slate palette, muted borders, soft accents, gutters, padding, slim gauges | Visual inspection of wide, compact, small, and settings previews |
 | Empty storage data looked permanently “loading” | Separate loading, unavailable mount, and no-mount states | Render paths distinguish initial and collected snapshots |
 
+## Packed-grid movement and new sources
+
+Moving onto an occupied tile previews an exchange of complete slots, including spans. Both affected tiles render in their future positions, with preview labels. Keyboard Enter and mouse release commit one undoable change. Resizing remains constrained by free space. The `r` editor action replaces a tile in its slot, so the full default grid can use any new tile immediately.
+
+The registry now includes processes, battery, temperatures, calendar, Git status, HTTP service checks, weather, and a configurable usage-report reader. The [gallery](previews/gallery.svg) renders all fourteen with fixtures; [swap preview](previews/swap.svg) shows a packed-grid exchange. Report parsing and service checks use local fixtures in tests; no credentials or external network are needed to run tests. Hardware-specific values are not fabricated when a sensor or battery is absent.
+
 ## Visual and refresh improvements
 
 Larger cards display oversized values, memory/network histories, and per-core CPU bars. Shared border annotations show each tile's interval. The editor uses a double border for selection, dotted empty cells, and shaded valid/blocked previews with span dimensions. Save/reload notices fade while errors remain visible. Slate, amber, and monochrome themes participate in the existing save/undo/cancel flow.
@@ -40,11 +46,11 @@ cargo run --locked --example preview -- docs/previews
 cargo build --release --locked
 ```
 
-The 31 Rust tests cover geometry, config preservation, responsive selection, editor transactions, mouse resizing/collisions, Unicode fields, new tile values/unavailable states, network counter resets, legacy configurations, independent instance deadlines, paused profiles, stale response rejection, per-instance network rates, interval validation/persistence, themes, and transient notices.
+The 44 Rust tests cover geometry, config preservation, responsive selection, editor transactions, mouse resizing/collisions, Unicode fields, new tile values/unavailable states, network counter resets, legacy configurations, independent instance deadlines, paused profiles, stale response rejection, per-instance network rates, interval validation/persistence, themes, transient notices, packed-grid swaps, replacement, new tile states, JSON validation, local Git collection, and worker isolation during a stalled HTTP check.
 
-The tmux smoke script creates an isolated terminal and temporary config, then exercises six live tiles, five terminal shapes, blocked moves, mouse dragging, settings/paste, refresh interval and theme persistence, save/cancel, adding a network tile, a missing interface, recovery from a bad config reload, independent 250 ms and 4 s clocks, and clean exit.
+The tmux smoke script creates an isolated terminal and temporary config, then exercises six live tiles, five terminal shapes, full-grid swap previews, blocked resizing, replacement/undo, mouse dragging, settings/paste, refresh interval and theme persistence, save/cancel, adding a network tile, a missing interface, recovery from a bad config reload, independent 250 ms and 4 s clocks, and clean exit. A separate 160×54 live-gallery run checked the new process collector, hardware availability states, local Git, usage-file loading, and setup prompts.
 
-Visual review sizes: **120×44**, **120×30** (slate, amber, monochrome, and edit preview), **80×24**, **42×28**, and **38×16**. Additional layout/readability checks: **120×12**, **38×40**, and **26×10**, plus tiny windows that display the resize prompt. Full keyboard/mouse runtime checks were performed on Linux. macOS ARM64 and Windows x86-64 were checked with `cargo check --all-targets` against their targets; those checks do not execute the app on those operating systems.
+Visual review sizes: **160×54** (all fourteen tiles), **120×44**, **120×30** (slate, amber, monochrome, and edit preview), **80×24**, **42×28**, and **38×16**. Additional layout/readability checks: **120×12**, **38×40**, and **26×10**, plus tiny windows that display the resize prompt. Full keyboard/mouse runtime checks were performed on Linux. This update passed `cargo check --all-targets` for macOS ARM64 and Windows x86-64, using temporary Zig 0.14.1 C compiler wrappers for the TLS dependency. These checks do not link or execute native binaries; native runtime remains unverified.
 
 The SVGs in [previews](previews/) are generated from Ratatui's actual rendered cell buffer with fixed sample metrics. They contain no live machine details. Font rendering may differ slightly from your terminal.
 
@@ -53,4 +59,4 @@ The SVGs in [previews](previews/) are generated from Ratatui's actual rendered c
 - Native macOS/Windows runtime and terminal-specific mouse behavior need those environments. CI is configured for all three operating systems; the previous GitHub run was blocked by account billing/spending limits.
 - Small default profiles show a subset of tiles, as declared in TOML. Editing a different profile while the terminal is small can still yield compact placeholders; enlarge the terminal to preview that layout at its intended size.
 - Tile content remains display-only. Grid rules still live in TOML; the UI edits placement and tile settings.
-- Adding tiles requires free grid space. No automatic rearrangement is performed.
+- Adding a separate tile needs free space. Replacement works in occupied slots, and swaps work on a full grid without changing unrelated tiles.

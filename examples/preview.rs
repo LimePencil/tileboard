@@ -11,7 +11,10 @@ use std::{fmt::Write, fs, path::PathBuf};
 use tileboard::{
     app::App,
     config::Config,
-    metrics::{DiskUsage, MemoryUsage, Metrics, NetworkUsage, SystemInfo},
+    metrics::{
+        BatteryUsage, DiskUsage, MemoryUsage, Metrics, NetworkUsage, ProcessUsage, SystemInfo,
+        Temperature,
+    },
     theme,
     tiles::Registry,
     ui,
@@ -34,9 +37,15 @@ fn main() -> anyhow::Result<()> {
         ("mono", 120, 30, false),
         ("detail", 120, 44, false),
         ("editor", 120, 30, true),
+        ("gallery", 160, 54, false),
+        ("swap", 120, 30, true),
     ] {
         let mut app = App::new(
-            Config::default(),
+            if name == "gallery" {
+                toml::from_str(include_str!("all-tiles.toml"))?
+            } else {
+                Config::default()
+            },
             "preview.toml".into(),
             Registry::builtin(),
         );
@@ -47,6 +56,44 @@ fn main() -> anyhow::Result<()> {
         };
         let metrics = Metrics {
             ready: true,
+            processes: vec![
+                ProcessUsage {
+                    pid: 10,
+                    name: "rustc".into(),
+                    cpu: Some(124.0),
+                    memory: 640 << 20,
+                },
+                ProcessUsage {
+                    pid: 11,
+                    name: "browser".into(),
+                    cpu: Some(14.0),
+                    memory: 2 << 30,
+                },
+                ProcessUsage {
+                    pid: 12,
+                    name: "tileboard".into(),
+                    cpu: Some(0.5),
+                    memory: 24 << 20,
+                },
+            ],
+            temperatures: vec![
+                Temperature {
+                    label: "CPU package".into(),
+                    celsius: 54.5,
+                    critical: Some(100.0),
+                },
+                Temperature {
+                    label: "SSD".into(),
+                    celsius: 39.0,
+                    critical: Some(80.0),
+                },
+            ],
+            batteries: Some(Ok(vec![BatteryUsage {
+                percent: 78.0,
+                state: "Discharging".into(),
+                health: 96.0,
+                remaining_minutes: Some(215),
+            }])),
             cpu: Some(24.5),
             cores: vec![24.5; 8],
             now: Local.with_ymd_and_hms(2026, 9, 22, 14, 32, 9).unwrap(),
@@ -87,11 +134,44 @@ fn main() -> anyhow::Result<()> {
             app.update_metrics(sample);
         }
         app.update_metrics(metrics);
+        if name == "gallery" {
+            use tileboard::integrations::{ExternalData, UsageReport};
+            for (key, state) in &mut app.tiles {
+                state.metrics.external = match key.2.as_str() {
+                    "git" => Some(Ok(ExternalData::Git {
+                        branch: "main...origin/main".into(),
+                        changed: 3,
+                        staged: 1,
+                        untracked: 2,
+                    })),
+                    "service" => Some(Ok(ExternalData::Service {
+                        status: 200,
+                        milliseconds: 24,
+                    })),
+                    "weather" => Some(Ok(ExternalData::Weather {
+                        temperature: 22.5,
+                        feels_like: 23.0,
+                        humidity: 62.0,
+                        code: 2,
+                        unit: "°C".into(),
+                    })),
+                    "usage" => Some(Ok(ExternalData::Usage(UsageReport {
+                        used: 1250.0,
+                        limit: 5000.0,
+                        unit: "example requests".into(),
+                        reset_at: "2026-10-01T00:00:00Z".into(),
+                    }))),
+                    _ => None,
+                };
+            }
+        }
         app.resize(ratatui::layout::Rect::new(0, 0, width, height));
         if edit {
             app.handle_key(KeyCode::Char('e').into());
         }
-        if name == "editor" {
+        if name == "swap" {
+            app.handle_key(KeyCode::Right.into());
+        } else if name == "editor" {
             app.handle_key(KeyCode::Char('h').into());
         } else if edit {
             app.handle_key(KeyCode::Char('t').into());

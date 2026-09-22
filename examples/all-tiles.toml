@@ -1,0 +1,188 @@
+# Tile gallery. Best viewed at 160 columns × 54 rows or larger.
+# Example sources below are editable with e → select → t.
+version = 1
+theme = "slate"
+
+[[profiles]]
+name = "gallery"
+columns = 4
+rows = 4
+
+[[profiles.tiles]]
+id = "cpu"
+kind = "cpu"
+title = "CPU usage"
+accent = "cyan"
+refresh_ms = 1000
+[profiles.tiles.placement]
+column = 0
+row = 0
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "memory"
+kind = "memory"
+title = "Memory"
+accent = "cyan"
+refresh_ms = 2000
+[profiles.tiles.placement]
+column = 1
+row = 0
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "clock"
+kind = "clock"
+title = "Local time"
+accent = "cyan"
+refresh_ms = 1000
+[profiles.tiles.placement]
+column = 2
+row = 0
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "calendar"
+kind = "calendar"
+title = "Calendar"
+accent = "cyan"
+refresh_ms = 60000
+[profiles.tiles.placement]
+column = 3
+row = 0
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "storage"
+kind = "storage"
+title = "Storage"
+accent = "cyan"
+refresh_ms = 10000
+[profiles.tiles.placement]
+column = 0
+row = 1
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "network"
+kind = "network"
+title = "Network"
+accent = "cyan"
+refresh_ms = 1000
+[profiles.tiles.placement]
+column = 1
+row = 1
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "system"
+kind = "system"
+title = "System"
+accent = "cyan"
+refresh_ms = 5000
+[profiles.tiles.placement]
+column = 2
+row = 1
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "processes"
+kind = "processes"
+title = "Top processes"
+accent = "cyan"
+refresh_ms = 2000
+[profiles.tiles.placement]
+column = 3
+row = 1
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "battery"
+kind = "battery"
+title = "Battery"
+accent = "cyan"
+refresh_ms = 30000
+[profiles.tiles.placement]
+column = 0
+row = 2
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "temperature"
+kind = "temperature"
+title = "Temperatures"
+accent = "cyan"
+refresh_ms = 5000
+[profiles.tiles.placement]
+column = 1
+row = 2
+column_span = 1
+row_span = 1
+
+[[profiles.tiles]]
+id = "git"
+kind = "git"
+title = "Git status"
+accent = "cyan"
+refresh_ms = 5000
+[profiles.tiles.placement]
+column = 2
+row = 2
+column_span = 1
+row_span = 1
+[profiles.tiles.options]
+path = "."
+
+[[profiles.tiles]]
+id = "service"
+kind = "service"
+title = "Service health"
+accent = "cyan"
+refresh_ms = 30000
+[profiles.tiles.placement]
+column = 3
+row = 2
+column_span = 1
+row_span = 1
+[profiles.tiles.options]
+url = "http://127.0.0.1:3000/health"
+
+[[profiles.tiles]]
+id = "weather"
+kind = "weather"
+title = "Weather"
+accent = "cyan"
+refresh_ms = 600000
+[profiles.tiles.placement]
+column = 0
+row = 3
+column_span = 1
+row_span = 1
+[profiles.tiles.options]
+# Sample location: Seoul. Replace with your coordinates.
+latitude = "37.5665"
+longitude = "126.9780"
+
+[[profiles.tiles]]
+id = "usage"
+kind = "usage"
+title = "Usage / quota"
+accent = "cyan"
+refresh_ms = 60000
+[profiles.tiles.placement]
+column = 1
+row = 3
+column_span = 1
+row_span = 1
+[profiles.tiles.options]
+# Sample report, not a connected account.
+source = "examples/usage.json"

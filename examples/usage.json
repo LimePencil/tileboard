@@ -1,0 +1,6 @@
+{
+  "used": 1250,
+  "limit": 5000,
+  "unit": "example requests",
+  "reset_at": "2026-10-01T00:00:00Z"
+}

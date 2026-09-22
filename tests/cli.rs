@@ -53,3 +53,19 @@ fn clock_format_errors_are_reported_before_rendering() {
             .any(|e| e.to_string().contains("Invalid clock format"))
     );
 }
+
+#[test]
+fn gallery_configuration_contains_every_registered_tile() {
+    let config: tileboard::config::Config =
+        toml::from_str(include_str!("../examples/all-tiles.toml")).unwrap();
+    let registry = tileboard::tiles::Registry::builtin();
+    config.validate(&registry).unwrap();
+    for definition in registry.list() {
+        assert!(
+            config.profiles[0]
+                .tiles
+                .iter()
+                .any(|t| t.kind == definition.kind)
+        );
+    }
+}

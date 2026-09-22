@@ -18,6 +18,7 @@ use crate::{
 pub enum Modal {
     Add {
         selected: usize,
+        replace: bool,
     },
     Settings {
         fields: Vec<(String, String)>,
@@ -27,6 +28,12 @@ pub enum Modal {
     Help {
         scroll: usize,
     },
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Candidate {
+    Place(Placement),
+    Swap(usize),
 }
 
 struct Drag {
@@ -77,7 +84,7 @@ pub struct App {
     pub editing: bool,
     pub profile: usize,
     pub selected: usize,
-    pub candidate: Option<Placement>,
+    pub candidate: Option<Candidate>,
     pub modal: Option<Modal>,
     pub status: String,
     pub quit: bool,
@@ -257,6 +264,7 @@ impl App {
             } else {
                 state.pending_since = Some(now);
                 requests.push(SampleRequest {
+                    options: config.options.clone(),
                     key,
                     generation: state.generation,
                     sources: definition.sources,
@@ -348,9 +356,24 @@ impl App {
         }
     }
 
+    /// All affected slots, computed without mutating the live configuration.
+    pub fn placement_preview(&self) -> Option<Vec<(usize, Placement)>> {
+        let profile = &self.config.profiles[self.profile];
+        let original = profile.tiles.get(self.selected)?.placement;
+        match self.candidate? {
+            Candidate::Place(p) if profile.can_place(Some(self.selected), p) => {
+                Some(vec![(self.selected, p)])
+            }
+            Candidate::Swap(target) if target != self.selected => {
+                let destination = profile.tiles.get(target)?.placement;
+                Some(vec![(self.selected, destination), (target, original)])
+            }
+            _ => None,
+        }
+    }
+
     pub fn candidate_valid(&self) -> bool {
-        self.candidate
-            .is_some_and(|p| self.config.profiles[self.profile].can_place(Some(self.selected), p))
+        self.placement_preview().is_some()
     }
 
     fn remember(&mut self) {
@@ -380,23 +403,40 @@ impl App {
     }
 
     fn commit_candidate(&mut self) {
-        if self.candidate_valid() {
-            let candidate = self.candidate.take().unwrap();
-            if self.config.profiles[self.profile].tiles[self.selected].placement != candidate {
+        if let Some(changes) = self.placement_preview() {
+            let swapped = changes.len() == 2;
+            if changes
+                .iter()
+                .any(|(i, p)| self.config.profiles[self.profile].tiles[*i].placement != *p)
+            {
                 self.remember();
-                self.config.profiles[self.profile].tiles[self.selected].placement = candidate;
+                for (i, placement) in changes {
+                    self.config.profiles[self.profile].tiles[i].placement = placement;
+                }
+                self.sync_tiles();
             }
-            self.status = "Placement applied · u to undo · s to save".into();
+            self.candidate = None;
+            self.status = if swapped {
+                "Tiles swapped · u to undo · s to save"
+            } else {
+                "Placement applied · u to undo · s to save"
+            }
+            .into();
         } else if self.candidate.is_some() {
-            self.status = "Blocked: tiles cannot overlap or leave the grid · adjust or Esc".into();
+            self.status = "Blocked: resize needs free cells · adjust or Esc".into();
         }
     }
 
     fn preview(&mut self, dx: i32, dy: i32, resize: bool) {
-        let Some(tile) = self.config.profiles[self.profile].tiles.get(self.selected) else {
+        let profile = &self.config.profiles[self.profile];
+        let Some(tile) = profile.tiles.get(self.selected) else {
             return;
         };
-        let mut p = self.candidate.unwrap_or(tile.placement);
+        let mut p = match self.candidate {
+            Some(Candidate::Place(p)) => p,
+            Some(Candidate::Swap(i)) if !resize => profile.tiles[i].placement,
+            _ => tile.placement,
+        };
         let add = |value: u16, delta: i32, minimum: i32| {
             (i32::from(value) + delta).clamp(minimum, i32::from(u16::MAX)) as u16
         };
@@ -407,17 +447,53 @@ impl App {
             p.column = add(p.column, dx, 0);
             p.row = add(p.row, dy, 0);
         }
-        self.candidate = Some(p);
+        // Entering an occupied slot exchanges the two complete rectangles.
+        // Pick the tile at the leading edge, making multi-cell arrow moves predictable.
+        let edge = Placement {
+            column: if dx > 0 {
+                p.column.saturating_add(p.column_span - 1)
+            } else {
+                p.column
+            },
+            row: if dy > 0 {
+                p.row.saturating_add(p.row_span - 1)
+            } else {
+                p.row
+            },
+            column_span: if dx != 0 { 1 } else { p.column_span },
+            row_span: if dy != 0 { 1 } else { p.row_span },
+        };
+        self.candidate = if !resize
+            && matches!(self.candidate, Some(Candidate::Swap(_)))
+            && edge.overlaps(tile.placement)
+        {
+            Some(Candidate::Place(tile.placement))
+        } else if !resize {
+            profile
+                .tiles
+                .iter()
+                .enumerate()
+                .filter(|(i, t)| *i != self.selected && edge.overlaps(t.placement))
+                .min_by_key(|(_, t)| {
+                    t.placement.column.abs_diff(p.column) + t.placement.row.abs_diff(p.row)
+                })
+                .map(|(i, _)| Candidate::Swap(i))
+                .or(Some(Candidate::Place(p)))
+        } else {
+            Some(Candidate::Place(p))
+        };
         self.preview_status();
     }
 
     fn preview_status(&mut self) {
-        self.status = if self.candidate_valid() {
-            "Preview · Enter applies · Esc discards"
-        } else {
-            "Blocked: occupied cells or outside grid · adjust or Esc"
-        }
-        .into();
+        self.status = match self.candidate {
+            Some(Candidate::Swap(i)) => format!(
+                "Swap with {} · sizes follow slots · Enter applies · Esc discards",
+                self.config.profiles[self.profile].tiles[i].title
+            ),
+            _ if self.candidate_valid() => "Preview · Enter applies · Esc discards".into(),
+            _ => "Blocked: resize needs free cells or move is outside grid · adjust or Esc".into(),
+        };
     }
 
     pub fn handle_key(&mut self, key: KeyEvent) {
@@ -553,9 +629,16 @@ impl App {
                     self.status = "Tile removed from this profile · u to undo".into();
                 }
             }
-            KeyCode::Char('a') => {
+            KeyCode::Char('a') | KeyCode::Char('r') => {
                 self.candidate = None;
-                self.modal = Some(Modal::Add { selected: 0 });
+                let replace = key.code == KeyCode::Char('r');
+                if replace && self.config.profiles[self.profile].tiles.is_empty() {
+                    return;
+                }
+                self.modal = Some(Modal::Add {
+                    selected: 0,
+                    replace,
+                });
             }
             KeyCode::Char('t') => self.open_settings(),
             _ => {}
@@ -612,13 +695,26 @@ impl App {
                 KeyCode::PageUp => *scroll = scroll.saturating_sub(5),
                 _ => return,
             },
-            Modal::Add { selected } => {
+            Modal::Add { selected, replace } => {
                 let count = self.registry.list().len();
                 match key.code {
                     KeyCode::Down | KeyCode::Tab => *selected = (*selected + 1) % count,
                     KeyCode::Up | KeyCode::BackTab => *selected = (*selected + count - 1) % count,
                     KeyCode::Enter => {
                         let kind = self.registry.list()[*selected].kind;
+                        if *replace {
+                            let def = self.registry.get(kind).unwrap();
+                            let title = def.name.to_string();
+                            self.remember();
+                            let tile = &mut self.config.profiles[self.profile].tiles[self.selected];
+                            tile.kind = kind.into();
+                            tile.title = title;
+                            tile.options.clear();
+                            tile.refresh_ms = None;
+                            self.sync_tiles();
+                            self.status = "Tile replaced · t settings · u undo · s save".into();
+                            return;
+                        }
                         if let Some(placement) = self.new_tile_placement(kind) {
                             let def = self.registry.list()[*selected];
                             let kind = def.kind.to_string();
@@ -651,7 +747,8 @@ impl App {
                             self.status = "Tile added · resize with Shift+arrows or h/j/k/l".into();
                             return;
                         }
-                        self.status = "No readable space · free cells or enlarge terminal".into();
+                        self.status =
+                            "No readable space · Esc then r to replace selected tile".into();
                     }
                     _ => {}
                 }
@@ -800,7 +897,29 @@ impl App {
                     i32::from(cell.1) - i32::from(drag.start.1),
                 );
                 let resize = drag.resize;
-                self.candidate = Some(drag.origin);
+                self.candidate = Some(Candidate::Place(drag.origin));
+                if !resize {
+                    let target = self.config.profiles[self.profile]
+                        .tiles
+                        .iter()
+                        .enumerate()
+                        .find(|(i, tile)| {
+                            *i != self.selected
+                                && Placement {
+                                    column: cell.0,
+                                    row: cell.1,
+                                    column_span: 1,
+                                    row_span: 1,
+                                }
+                                .overlaps(tile.placement)
+                        })
+                        .map(|(i, _)| i);
+                    if let Some(target) = target {
+                        self.candidate = Some(Candidate::Swap(target));
+                        self.preview_status();
+                        return;
+                    }
+                }
                 self.preview(dx, dy, resize);
             }
             MouseEventKind::Up(MouseButton::Left) if self.drag.take().is_some() => {
@@ -826,10 +945,10 @@ mod tests {
     }
 
     #[test]
-    fn collision_does_not_change_layout_and_cancel_restores_session() {
+    fn resize_collision_does_not_change_layout_and_cancel_restores_session() {
         let mut app = app();
         let original = app.config.clone();
-        app.handle_key(KeyCode::Right.into());
+        app.handle_key(KeyCode::Char('l').into());
         assert!(!app.candidate_valid());
         app.handle_key(KeyCode::Enter.into());
         assert_eq!(app.config, original);
@@ -868,7 +987,16 @@ mod tests {
         let mut app = app();
         app.handle_key(KeyCode::Char('d').into());
         app.handle_key(KeyCode::Char('a').into());
-        app.handle_key(KeyCode::Enter.into()); // Clock is first in registry.
+        let clock_index = app
+            .registry
+            .list()
+            .iter()
+            .position(|d| d.kind == "clock")
+            .unwrap();
+        for _ in 0..clock_index {
+            app.handle_key(KeyCode::Down.into());
+        }
+        app.handle_key(KeyCode::Enter.into());
         assert_eq!(app.config.profiles[0].tiles.len(), 3);
         app.handle_key(KeyCode::Char('t').into());
         app.handle_key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL));
@@ -885,7 +1013,7 @@ mod tests {
     }
 
     #[test]
-    fn mouse_resize_and_blocked_move_keep_layout_valid() {
+    fn mouse_resize_and_swap_keep_layout_valid() {
         let mut app = app();
         let rect = app.tile_rect(app.config.profiles[0].tiles[0].placement);
         let mouse = |kind, column, row| MouseEvent {
@@ -927,7 +1055,15 @@ mod tests {
             rect.x + 60,
             rect.y + 1,
         ));
-        assert!(!app.candidate_valid());
-        assert_eq!(app.config, before);
+        assert!(app.candidate.is_none());
+        assert_eq!(
+            app.config.profiles[0].tiles[0].placement,
+            before.profiles[0].tiles[1].placement
+        );
+        assert_eq!(
+            app.config.profiles[0].tiles[1].placement,
+            before.profiles[0].tiles[0].placement
+        );
+        app.config.validate(&app.registry).unwrap();
     }
 }

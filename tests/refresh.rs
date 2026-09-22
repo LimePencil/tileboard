@@ -244,6 +244,7 @@ fn worker_returns_only_requested_sources() {
     let collector = Collector::start();
     collector
         .request(SampleRequest {
+            options: toml::Table::new(),
             key: key("memory", "memory"),
             generation: 1,
             sources: &[Source::Memory],

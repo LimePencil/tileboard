@@ -1,10 +1,15 @@
 //! Statically compiled tile API. Implement `Tile`, then register its factory.
+mod battery;
+mod calendar;
 mod clock;
 mod cpu;
+mod external;
 mod memory;
 mod network;
+mod processes;
 mod storage;
 mod system;
+mod temperature;
 mod visuals;
 
 use std::collections::BTreeMap;
@@ -53,6 +58,13 @@ impl Registry {
         let mut registry = Self {
             definitions: BTreeMap::new(),
         };
+        registry.register(battery::definition());
+        registry.register(calendar::definition());
+        registry.register(processes::definition());
+        registry.register(temperature::definition());
+        for definition in external::definitions() {
+            registry.register(definition);
+        }
         registry.register(cpu::definition());
         registry.register(clock::definition());
         registry.register(storage::definition());
@@ -63,6 +75,19 @@ impl Registry {
     }
 
     pub fn register(&mut self, definition: TileDefinition) {
+        use crate::metrics::Source;
+        assert!(
+            definition.sources.len() <= 1
+                || !definition.sources.iter().any(|s| matches!(
+                    s,
+                    Source::Git
+                        | Source::Service
+                        | Source::Weather
+                        | Source::Usage
+                        | Source::Battery
+                )),
+            "Dedicated worker sources must be the only source in a tile definition"
+        );
         assert!(
             !self.definitions.contains_key(definition.kind),
             "Duplicate tile kind"
@@ -121,4 +146,11 @@ pub fn option<'a>(config: &'a TileConfig, key: &str, fallback: &'a str) -> &'a s
         .get(key)
         .and_then(toml::Value::as_str)
         .unwrap_or(fallback)
+}
+
+/// External strings cannot add rows or terminal controls to a tile.
+fn plain_text(text: &str) -> String {
+    text.chars()
+        .map(|c| if c.is_control() { ' ' } else { c })
+        .collect()
 }

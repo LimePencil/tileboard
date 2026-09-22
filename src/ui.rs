@@ -9,7 +9,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthStr;
 
 use crate::{
-    app::{App, Modal},
+    app::{App, Candidate, Modal},
     grid::Placement,
     theme,
     tiles::accent,
@@ -21,13 +21,14 @@ pub const HELP_LINES: &[&str] = &[
     "",
     "LAYOUT EDITOR",
     "Tab / Shift+Tab: next / previous tile",
-    "Arrows: preview movement",
+    "Arrows: move into free cells or swap occupied tiles",
+    "Swaps exchange full slots, including their sizes",
     "Shift+arrows: preview resize",
     "h / l: shrink / grow width",
     "k / j: shrink / grow height",
     "Enter: apply preview · Esc: discard preview",
     "Drag a tile to move; drag ◢ to resize",
-    "a add · d delete · t settings · u undo",
+    "a add · r replace · d delete · t settings · u undo",
     "p: edit next responsive profile · c: cycle theme",
     "Refresh interval: milliseconds, 250–86400000",
     "s: save all edits and return to live",
@@ -147,8 +148,15 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             grid.area,
         );
     }
+    let preview = app.placement_preview().unwrap_or_default();
     for (index, config) in profile.tiles.iter().enumerate() {
-        let rect = app.tile_rect(config.placement);
+        let placement = preview
+            .iter()
+            .find(|(i, _)| *i == index)
+            .map(|(_, p)| *p)
+            .unwrap_or(config.placement);
+        let affected = preview.iter().any(|(i, _)| *i == index);
+        let rect = app.tile_rect(placement);
         if rect.is_empty() {
             continue;
         }
@@ -161,7 +169,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         let title = if selected {
             format!(
                 " {} · {}×{} ",
-                config.title, config.placement.column_span, config.placement.row_span
+                config.title, placement.column_span, placement.row_span
             )
         } else {
             format!(" {} ", config.title)
@@ -174,7 +182,13 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             .get(&key)
             .and_then(|state| state.pending_since)
             .is_some_and(|time| time.elapsed().as_secs() >= 5);
-        let annotation = if delayed {
+        let annotation = if affected {
+            if preview.len() == 2 {
+                " swap preview ".into()
+            } else {
+                " preview ".into()
+            }
+        } else if delayed {
             " delayed ".into()
         } else {
             format!(" {interval} ")
@@ -196,13 +210,24 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
                 title,
                 Style::default().fg(color).add_modifier(Modifier::BOLD),
             ))
-            .style(theme::surface())
-            .border_style(Style::default().fg(if selected { color } else { theme::BORDER }));
+            .style(if affected {
+                theme::surface().bg(theme::PREVIEW_OK)
+            } else {
+                theme::surface()
+            })
+            .border_style(Style::default().fg(if selected {
+                color
+            } else if affected {
+                theme::GREEN
+            } else {
+                theme::BORDER
+            }));
         let mut inner = block.inner(rect);
         if inner.width >= 16 {
             inner.x += 1;
             inner.width -= 2;
         }
+        frame.render_widget(Clear, rect);
         frame.render_widget(block, rect);
         let key = (profile.name.clone(), config.id.clone(), config.kind.clone());
         if let Some(tile) = app.tiles.get(&key) {
@@ -223,7 +248,7 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             );
         }
     }
-    if let Some(candidate) = app.candidate {
+    if let Some(Candidate::Place(candidate)) = app.candidate.filter(|_| !app.candidate_valid()) {
         let valid = app.candidate_valid();
         frame.render_widget(
             Block::new()
@@ -256,16 +281,17 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     );
     let footer = match &app.modal {
         Some(Modal::Settings { .. }) => "Tab field  Enter apply\nEsc close  Ctrl+u clear",
+        Some(Modal::Add { replace: true, .. }) => "↑/↓ select  Enter replace\nEsc close",
         Some(Modal::Add { .. }) => "↑/↓ select  Enter add\nEsc close",
         Some(Modal::Help { .. }) => "↑/↓ scroll  Esc close",
         None if app.candidate.is_some() => {
             "Enter apply  Esc discard\nArrows move  h/l width  k/j height"
         }
         None if app.editing && area.width < 75 => {
-            "s save  Esc cancel  ? help\nTab select  a add  t settings"
+            "s save  Esc cancel  ? help\nTab select  r replace  t settings"
         }
         None if app.editing => {
-            "Tab select  arrows move  h/j/k/l resize  a add  t settings  d delete\ns save  Esc cancel  Enter apply  u undo  p profile  c theme  ? help"
+            "Tab select  arrows move  h/j/k/l resize  a add  r replace  t settings\ns save  Esc cancel  Enter apply  u undo  p profile  c theme  ? help"
         }
         _ => "e edit   ? help   q quit",
     };
@@ -314,7 +340,7 @@ fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
                 .collect(),
             None,
         ),
-        Modal::Add { selected } => {
+        Modal::Add { selected, replace } => {
             let mut lines = vec![Line::from("Choose a tile"), Line::from("")];
             for (i, definition) in app.registry.list().iter().enumerate() {
                 lines.push(
@@ -330,7 +356,15 @@ fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
                     })),
                 );
             }
-            (" Add tile ", lines, None)
+            (
+                if *replace {
+                    " Replace tile "
+                } else {
+                    " Add tile "
+                },
+                lines,
+                None,
+            )
         }
         Modal::Settings {
             fields,
@@ -381,7 +415,7 @@ fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
     let visible = height.saturating_sub(2) as usize;
     let scroll = match modal {
         Modal::Settings { selected, .. } => (selected * 3 + 2).saturating_sub(visible),
-        Modal::Add { selected } => (selected + 3).saturating_sub(visible),
+        Modal::Add { selected, .. } => (selected + 3).saturating_sub(visible),
         _ => 0,
     };
     let mut paragraph = Paragraph::new(lines).scroll((scroll as u16, 0));

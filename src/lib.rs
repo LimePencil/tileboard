@@ -5,3 +5,5 @@ pub mod metrics;
 pub mod theme;
 pub mod tiles;
 pub mod ui;
+
+pub mod integrations;

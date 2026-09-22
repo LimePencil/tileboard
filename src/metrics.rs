@@ -5,8 +5,9 @@ use std::{
     time::{Duration, Instant},
 };
 
+use crate::integrations::ExternalData;
 use chrono::{DateTime, Local};
-use sysinfo::{Disks, Networks, System};
+use sysinfo::{Components, Disks, Networks, ProcessRefreshKind, ProcessesToUpdate, System};
 
 #[derive(Debug, Clone)]
 pub struct MemoryUsage {
@@ -78,7 +79,32 @@ pub struct DiskUsage {
 }
 
 #[derive(Debug, Clone)]
+pub struct ProcessUsage {
+    pub pid: u32,
+    pub name: String,
+    pub cpu: Option<f32>,
+    pub memory: u64,
+}
+#[derive(Debug, Clone)]
+pub struct Temperature {
+    pub label: String,
+    pub celsius: f32,
+    pub critical: Option<f32>,
+}
+#[derive(Debug, Clone)]
+pub struct BatteryUsage {
+    pub percent: f32,
+    pub state: String,
+    pub health: f32,
+    pub remaining_minutes: Option<u64>,
+}
+
+#[derive(Debug, Clone)]
 pub struct Metrics {
+    pub processes: Vec<ProcessUsage>,
+    pub temperatures: Vec<Temperature>,
+    pub batteries: Option<Result<Vec<BatteryUsage>, String>>,
+    pub external: Option<Result<ExternalData, String>>,
     pub ready: bool,
     pub cpu: Option<f32>,
     pub cores: Vec<f32>,
@@ -93,6 +119,10 @@ pub struct Metrics {
 impl Default for Metrics {
     fn default() -> Self {
         Self {
+            processes: vec![],
+            temperatures: vec![],
+            batteries: None,
+            external: None,
             ready: false,
             cpu: None,
             cores: vec![],
@@ -113,12 +143,20 @@ pub enum Source {
     Network,
     Storage,
     System,
+    Processes,
+    Temperature,
+    Battery,
+    Git,
+    Service,
+    Weather,
+    Usage,
 }
 
 pub type TileKey = (String, String, String);
 
 #[derive(Debug, Clone)]
 pub struct SampleRequest {
+    pub options: toml::Table,
     pub key: TileKey,
     pub generation: u64,
     pub sources: &'static [Source],
@@ -132,6 +170,7 @@ pub struct SampleResult {
 /// The UI requests only due tiles. There is at most one outstanding request per instance.
 /// Requests arriving together share source collection, but each tile keeps its own snapshot.
 pub struct Collector {
+    external: BTreeMap<Source, Sender<SampleRequest>>,
     sender: Sender<SampleRequest>,
     receiver: Receiver<SampleResult>,
 }
@@ -140,8 +179,46 @@ impl Collector {
     pub fn start() -> Self {
         let (sender, requests) = mpsc::channel::<SampleRequest>();
         let (results, receiver) = mpsc::channel();
+        let mut external = BTreeMap::new();
+        for source in [
+            Source::Git,
+            Source::Service,
+            Source::Weather,
+            Source::Usage,
+            Source::Battery,
+        ] {
+            let (sender, requests) = mpsc::channel::<SampleRequest>();
+            external.insert(source, sender);
+            let results = results.clone();
+            thread::spawn(move || {
+                let client = crate::integrations::client();
+                while let Ok(request) = requests.recv() {
+                    let mut metrics = Metrics {
+                        ready: true,
+                        ..Metrics::default()
+                    };
+                    if source == Source::Battery {
+                        metrics.batteries = Some(read_batteries());
+                    } else {
+                        metrics.external = Some(match &client {
+                            Ok(client) => {
+                                crate::integrations::collect(source, &request.options, client)
+                                    .map_err(|e| format!("{e:#}"))
+                            }
+                            Err(_) => Err("Cannot initialize HTTP client".into()),
+                        });
+                    }
+                    if results.send(SampleResult { request, metrics }).is_err() {
+                        break;
+                    }
+                }
+            });
+        }
         thread::spawn(move || {
             let mut system = System::new();
+            let mut processes = System::new();
+            let mut process_time: Option<Instant> = None;
+            let mut components = Components::new();
             let mut disks = Disks::new();
             let mut networks = Networks::new();
             let mut cache = Metrics::default();
@@ -157,6 +234,52 @@ impl Collector {
                 let mut network_time = Instant::now();
                 for source in sources {
                     match source {
+                        Source::Processes => {
+                            if process_time.is_none_or(|time| {
+                                time.elapsed() >= sysinfo::MINIMUM_CPU_UPDATE_INTERVAL
+                            }) {
+                                let warmed = process_time.is_some();
+                                processes.refresh_processes_specifics(
+                                    ProcessesToUpdate::All,
+                                    true,
+                                    ProcessRefreshKind::nothing()
+                                        .with_cpu()
+                                        .with_memory()
+                                        .without_tasks(),
+                                );
+                                process_time = Some(Instant::now());
+                                cache.processes = processes
+                                    .processes()
+                                    .iter()
+                                    .map(|(pid, p)| ProcessUsage {
+                                        pid: pid.as_u32(),
+                                        name: p.name().to_string_lossy().into_owned(),
+                                        cpu: warmed.then(|| p.cpu_usage()),
+                                        memory: p.memory(),
+                                    })
+                                    .collect();
+                            }
+                        }
+                        Source::Temperature => {
+                            components.refresh(true);
+                            cache.temperatures = components
+                                .iter()
+                                .filter_map(|c| {
+                                    c.temperature().filter(|v| v.is_finite()).map(|celsius| {
+                                        Temperature {
+                                            label: c.label().into(),
+                                            celsius,
+                                            critical: c.critical(),
+                                        }
+                                    })
+                                })
+                                .collect();
+                        }
+                        Source::Battery
+                        | Source::Git
+                        | Source::Service
+                        | Source::Weather
+                        | Source::Usage => {}
                         Source::Cpu => {
                             if cpu_time.is_none() {
                                 system.refresh_cpu_usage();
@@ -233,6 +356,15 @@ impl Collector {
                                 metrics.cpu = cache.cpu;
                                 metrics.cores = cache.cores.clone();
                             }
+                            Source::Processes => metrics.processes = cache.processes.clone(),
+                            Source::Temperature => {
+                                metrics.temperatures = cache.temperatures.clone()
+                            }
+                            Source::Battery
+                            | Source::Git
+                            | Source::Service
+                            | Source::Weather
+                            | Source::Usage => {}
                             Source::Memory => metrics.memory = cache.memory.clone(),
                             Source::Network => {
                                 metrics.networks = network_snapshot.clone();
@@ -248,15 +380,53 @@ impl Collector {
                 }
             }
         });
-        Self { sender, receiver }
+        Self {
+            sender,
+            receiver,
+            external,
+        }
     }
 
-    pub fn request(&self, request: SampleRequest) -> Result<(), mpsc::SendError<SampleRequest>> {
-        self.sender.send(request)
+    pub fn request(&self, request: SampleRequest) -> anyhow::Result<()> {
+        if let [source] = request.sources
+            && let Some(sender) = self.external.get(source)
+        {
+            return sender
+                .send(request)
+                .map_err(|_| anyhow::anyhow!("Metrics worker stopped"));
+        }
+        self.sender
+            .send(request)
+            .map_err(|_| anyhow::anyhow!("Metrics worker stopped"))
     }
     pub fn drain(&self) -> impl Iterator<Item = SampleResult> + '_ {
         self.receiver.try_iter()
     }
+}
+
+fn read_batteries() -> Result<Vec<BatteryUsage>, String> {
+    use starship_battery::{
+        Manager,
+        units::{ratio::percent, time::minute},
+    };
+    let read = || -> anyhow::Result<Vec<BatteryUsage>> {
+        let manager = Manager::new()?;
+        let mut batteries = vec![];
+        for battery in manager.batteries()? {
+            let battery = battery?;
+            batteries.push(BatteryUsage {
+                percent: battery.state_of_charge().get::<percent>(),
+                state: format!("{:?}", battery.state()),
+                health: battery.state_of_health().get::<percent>(),
+                remaining_minutes: battery
+                    .time_to_full()
+                    .or_else(|| battery.time_to_empty())
+                    .map(|time| time.get::<minute>().max(0.0) as u64),
+            });
+        }
+        Ok(batteries)
+    };
+    read().map_err(|_| "Battery information unavailable".into())
 }
 
 #[cfg(test)]

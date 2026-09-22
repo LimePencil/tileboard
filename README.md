@@ -2,11 +2,11 @@
 
 A Rust terminal dashboard with a snapping grid, spanning tiles, and layouts you control.
 
-Six built-in tiles cover CPU, memory and swap, network throughput, storage, local time, and system uptime. Tiles are ordinary Rust modules compiled into the application. Layouts, titles, colors, and tile settings live in TOML and can change without rebuilding.
+Fourteen built-in tiles cover system metrics, processes, battery, temperatures, calendars, Git, services, weather, and usage quotas. Tiles are ordinary Rust modules compiled into the application. Layouts, titles, colors, and tile settings live in TOML and can change without rebuilding.
 
 ![Tileboard at 120×30, rendered from the actual UI with sample data](docs/previews/wide.svg)
 
-[Compact](docs/previews/compact.svg) · [Small](docs/previews/small.svg) · [Detailed](docs/previews/detail.svg) · [Amber](docs/previews/amber.svg) · [Monochrome](docs/previews/mono.svg) · [Editor](docs/previews/editor.svg) · [Settings](docs/previews/settings.svg)
+[All tiles](docs/previews/gallery.svg) · [Swap preview](docs/previews/swap.svg) · [Compact](docs/previews/compact.svg) · [Small](docs/previews/small.svg) · [Detailed](docs/previews/detail.svg) · [Amber](docs/previews/amber.svg) · [Monochrome](docs/previews/mono.svg) · [Editor](docs/previews/editor.svg) · [Settings](docs/previews/settings.svg)
 
 Slate, amber, and monochrome themes use muted borders, padded cards, and slim usage bars. Larger tiles show oversized values, memory/network history graphs, and per-core CPU bars. Editing adds dotted grid guides and shaded placement previews; success notices fade after four seconds. Previews use sample data; live tiles display your machine's metrics.
 
@@ -27,7 +27,7 @@ tileboard
 
 Linux, macOS, and Windows are CI targets. Use a UTF-8 terminal; SSH works when the terminal forwards input and resize events. Mouse support depends on the terminal. Every editing operation is available from the keyboard.
 
-Existing configuration files and layouts are preserved. Add new tiles with **e → a** (free some cells first), or try the six-tile layout with `cargo run --release -- --config examples/dashboard.toml`.
+Existing configuration files and layouts are preserved. Replace a tile in place with **e → select → r**, or add one in free space with **e → a**, or try the six-tile layout with `cargo run --release -- --config examples/dashboard.toml`.
 
 The first launch creates a default configuration in the platform's user configuration directory. To keep a configuration in a known location:
 
@@ -46,14 +46,15 @@ Press **e** to start an edit session. The shown profile stays pinned while editi
 | Control | Action |
 | --- | --- |
 | Tab / Shift+Tab | Select next / previous tile |
-| Arrow keys | Preview a move by one grid cell |
+| Arrow keys | Move through free cells; swap when entering an occupied tile |
 | Shift+arrow keys | Preview resizing by one grid cell |
 | h / l | Shrink / grow width (alternative to Shift+arrows) |
 | k / j | Shrink / grow height |
 | Enter | Apply a valid preview |
-| Mouse drag | Move a tile; release applies a valid move |
+| Mouse drag | Move into free space or onto another tile to swap; release applies |
 | Drag bottom-right ◢ | Resize a tile |
 | a | Add a tile to a readable empty area |
+| r | Replace the selected tile, keeping its grid slot |
 | d / Delete | Remove the selected tile |
 | t | Edit title, accent, tile-specific options, and refresh interval |
 | c | Cycle slate, amber, and monochrome themes |
@@ -63,7 +64,9 @@ Press **e** to start an edit session. The shown profile stays pinned while editi
 | Esc | Discard a preview; otherwise cancel the entire edit session |
 | ? | Show help |
 
-Occupied cells block moves and resizes. The candidate turns red; the original placement stays unchanged. Correct the candidate or press Esc to discard it. Pending previews must be applied or discarded before saving. To add a tile to the initially full layout, shrink or remove an existing tile first.
+**A full grid is rearrangeable.** Move toward an occupied tile with arrows, or drag onto it, to preview a swap. Both tiles appear in their proposed slots with a “swap preview” label. **Enter** applies a keyboard preview; releasing the mouse applies a drag. **Esc** discards the preview and **u** undoes the entire swap. Tiles exchange their complete grid rectangles, including spans when the sizes differ; their settings and refresh intervals stay with them.
+
+Moving into free space keeps the grid placement workflow. Resizing still requires free cells; a blocked resize or out-of-bounds move turns red without changing the saved layout. Pending previews must be applied or discarded before saving. Use **r** while editing to replace a tile without freeing cells: the new kind uses its default options and refresh interval, keeps the old slot and accent, and participates in undo/save/cancel.
 
 In settings, **Tab** changes fields, **Ctrl+u** clears the current field, and **Enter** applies. Left/Right and Home/End move the text cursor; Backspace/Delete edit text, and bracketed paste is supported. In the accent field, Left/Right cycles colors. Long fields scroll to keep the cursor visible. Colors: `cyan`, `magenta`, `green`, `yellow`, `blue`, `red`, `white`. The clock accepts a Chrono/strftime format such as `%H:%M:%S` or `%I:%M %p`. Storage accepts an exact mount path; leave it empty to show all mounts. Network accepts an exact interface name; leave it empty to display the busiest interface (excluding `lo`/`lo0`). Unavailable interfaces stay unavailable instead of silently substituting another one.
 
@@ -121,7 +124,48 @@ rows = 4
 
 Positions start at zero. A tile may span any number of cells within its grid. Each profile defines its own tiles and settings; omit a tile from a profile to hide it at that size. Grid dimensions range from 1 to 64. Terminal cells are distributed proportionally, including leftover columns/rows. Aspect means terminal columns divided by rows, not a physical pixel ratio.
 
-Grid dimensions and responsive rules are edited in TOML; tile placement and settings are also editable in the UI. Tiles below their minimum readable size show a compact placeholder. Terminals smaller than 26×10 show a resize prompt. There is no automatic rearranging, scrolling, or hidden collision resolution.
+Grid dimensions and responsive rules are edited in TOML; tile placement and settings are also editable in the UI. Tiles below their minimum readable size show a compact placeholder. Terminals smaller than 26×10 show a resize prompt. Swaps affect only the selected tile and its destination. There is no cascading rearrangement or scrolling.
+
+## Available tiles
+
+| Kind | Shows / settings | Default refresh |
+| --- | --- | --- |
+| `cpu` | Total CPU, history, per-core bars | 1 s |
+| `memory` | RAM, swap, history | 2 s |
+| `network` | Receive/send rates; optional interface | 1 s |
+| `storage` | Free/used space; optional mount | 10 s |
+| `clock` | Local time; strftime format | 1 s |
+| `system` | Uptime, host, OS, CPU count | 5 s |
+| `processes` | Top processes; sort by `cpu` or `memory`, name filter | 2 s |
+| `battery` | Charge, state, health, remaining-time estimate when available | 30 s |
+| `temperature` | Hottest sensors first; name filter, Celsius/Fahrenheit | 5 s |
+| `calendar` | Current month with today highlighted; Monday/Sunday week start | 1 min |
+| `git` | Branch/upstream summary, changed/staged/untracked files; repository path | 5 s |
+| `service` | HTTP status and response time; URL checked with HEAD | 30 s |
+| `weather` | Temperature, feels-like, humidity, conditions; latitude/longitude and units | 10 min |
+| `usage` | Used/limit, percentage, remaining quota, reset text; JSON file or endpoint | 1 min |
+
+Try the complete gallery in a terminal around **160×54** or larger:
+
+```sh
+cargo run --release -- --config examples/all-tiles.toml
+```
+
+The gallery contains example sources: this repository, a local health endpoint, Seoul weather, and a clearly labeled sample usage report. Existing user layouts are never replaced automatically. The gallery's calendar and process tiles need wider/taller slots; smaller slots show “Enlarge tile.”
+
+Process CPU uses **100% per logical CPU**, so a multithreaded process can exceed 100%; `CPU¹` marks this convention. Its first sample warms up. Temperature and battery availability depend on OS/hardware support; missing hardware is shown explicitly. Battery collection uses [starship-battery](https://docs.rs/starship-battery/latest/starship_battery/).
+
+Git requires the `git` executable and reads the local checkout without fetching. Relative file/repository paths are resolved from the application's working directory. Service checks use HEAD: only 2xx is healthy, and redirects are reported without being followed. Weather uses [Open-Meteo](https://open-meteo.com/en/docs); blank coordinates make no request. Source workers are separate from system sampling and from one another, with five-second HTTP/Git timeouts. Tiles of the same external source share that source's worker.
+
+### Usage reports
+
+The usage tile is a configurable report reader; it does **not** automatically connect to an account or estimate a provider's quota. Set `source` to a regular JSON file or HTTP(S) endpoint returning:
+
+```json
+{"used": 1250, "limit": 5000, "unit": "requests", "reset_at": "2026-10-01T00:00:00Z"}
+```
+
+`used` must be nonnegative and `limit` positive. `unit` and `reset_at` are optional; reset text is displayed as provided. For an authenticated endpoint, set `token_env` to the name of an environment variable containing a bearer token. The token itself stays outside TOML. An account-specific exporter or endpoint must supply the report; [examples/usage.json](examples/usage.json) is sample data. Missing, malformed, oversized, or unreachable reports show an error instead of a fabricated usage value.
 
 ## Tile refresh intervals
 
@@ -165,7 +209,7 @@ impl Tile for MyTile {
 }
 ```
 
-`sources` declares the needed `metrics::Source` values, such as `&[Source::Cpu]`; the worker returns only those sources. Use `&[]` for a self-contained tile such as the clock, which updates without worker I/O.
+For OS sources, `sources` declares the needed `metrics::Source` values, such as `&[Source::Cpu]`; the worker returns only those sources. External and battery sources use dedicated workers and must be the sole source in their definition; `SampleRequest.options` carries each tile's settings. Use `&[]` for a self-contained tile such as the clock, which updates without worker I/O.
 
 The host draws the title/border and supplies the tile's inner rectangle. Draw only within that rectangle. `minimum_size()` includes the surrounding border. Configurable tile options are strings, exposed through the settings form. Keep `update` and `render` quick; custom network or disk work belongs on a worker thread. Tiles are trusted application code and are not isolated from crashes. The optional `handle_key` hook is reserved for future interaction; the current dashboard does not dispatch input to tiles.
 
@@ -185,7 +229,8 @@ Source structure:
 - `grid.rs`: spanning placement, collision checks, terminal/grid coordinate mapping.
 - `app.rs`: independent tile schedules/caches, editor transactions, previews, undo, keyboard/mouse handling.
 - `ui.rs`: dashboard and editor rendering.
-- `metrics.rs`: background system sampling.
+- `metrics.rs`: background system sampling and source workers.
+- `integrations.rs`: Git, HTTP checks, weather, and usage-report collection.
 - `tiles/`: registry, tile API, and built-in implementations.
 - `theme.rs`: theme presets, shared colors, byte and interval formatting.
 
