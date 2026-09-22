@@ -14,6 +14,27 @@ Slate, amber, and monochrome themes use muted borders, padded cards, and slim us
 
 ## Download or build
 
+Install the latest release with one command:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/LimePencil/tileboard/main/install.sh | sh
+```
+
+The installer detects your OS and CPU, verifies the release's SHA-256 checksum, and installs `tileboard` in `~/.local/bin` without sudo. It adds that directory to your shell's startup files. Open a new terminal, then run `tileboard`; the installer also prints a command to update your current terminal. Rerun the installer to upgrade. Your layouts and settings are preserved.
+
+Supported shells are Bash, Zsh, Fish, and POSIX-style shells. On **Windows x64**, run the command in **Git Bash, MSYS2, or Cygwin**; it also updates your Windows User PATH. Restart your terminal application to pick up that change. WSL installs the Linux binary. For native PowerShell installation, download and extract the Windows archive below.
+
+Requires `curl`, `tar` (or `unzip` on Windows), and one of `sha256sum`, `shasum`, or `openssl`. Linux requires glibc 2.35+; Alpine/musl and unsupported platforms need a source build.
+
+To select a release or installation directory:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/LimePencil/tileboard/main/install.sh | sh -s -- \
+  --version 0.1.0 --bin-dir "$HOME/.local/bin"
+```
+
+Use `--no-modify-path` to manage PATH yourself, `--shell bash|zsh|fish|sh` to override shell detection, or `--profile /absolute/path` to select a startup file. Zsh respects `ZDOTDIR`; Fish respects `XDG_CONFIG_HOME`. View all options with `sh -s -- --help`, or [read the installer](install.sh) before running it. To uninstall, remove the installed binary and its `# Tileboard` startup entries (and Windows User PATH entry, if applicable).
+
 Download **v0.1.0** from [GitHub Releases](https://github.com/LimePencil/tileboard/releases/latest). Extract the archive for your OS and architecture, then run `./tileboard` (Linux/macOS) or `.\tileboard.exe` (PowerShell). Each archive includes example layouts and documentation. `SHA256SUMS` lists the archive checksums.
 
 | Platform | Archive target |

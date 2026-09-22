@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add a single shell installer with platform detection, checksum verification, per-user installation, and persistent shell/Windows PATH setup.
+
 ## 0.1.0 — 2026-09-22
 
 First release of Tileboard, a customizable Rust terminal dashboard.

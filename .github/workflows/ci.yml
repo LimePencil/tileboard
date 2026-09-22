@@ -32,6 +32,33 @@ jobs:
         run: |
           rustup toolchain install stable --profile minimal --component rustfmt --component clippy
           rustup default stable
+      - name: Install shell test tools
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck fish zsh
+          shellcheck install.sh
+      - name: Installer fixture tests
+        if: runner.os != 'Windows'
+        run: python3 scripts/test_installer.py
+      - name: Windows installer smoke test
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          install_dir="$(cygpath -u "$RUNNER_TEMP")/tileboard installer/bin"
+          profile="$(cygpath -u "$RUNNER_TEMP")/tileboard installer/profile"
+          sh install.sh --bin-dir "$install_dir" --profile "$profile" --shell bash
+          sh install.sh --bin-dir "$install_dir" --profile "$profile" --shell bash
+          # shellcheck disable=SC1090
+          . "$profile"
+          tileboard --version
+          TILEBOARD_WINDOWS_INSTALL_DIR="$(cygpath -w "$install_dir")"
+          export TILEBOARD_WINDOWS_INSTALL_DIR
+          # shellcheck disable=SC2016
+          powershell.exe -NoProfile -NonInteractive -Command '
+            $entries = [Environment]::GetEnvironmentVariable("Path", "User") -split ";"
+            if (@($entries | Where-Object { $_ -eq $env:TILEBOARD_WINDOWS_INSTALL_DIR }).Count -ne 1) { exit 1 }
+          '
       - run: cargo fmt --all -- --check
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked --all-targets
