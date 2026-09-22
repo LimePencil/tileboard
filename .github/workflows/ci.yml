@@ -41,7 +41,15 @@ jobs:
       - name: Installer fixture tests
         if: runner.os != 'Windows'
         run: python3 scripts/test_installer.py
-      - name: Windows installer smoke test
+      - name: PowerShell 5.1 installer tests
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./scripts/test_installer.ps1
+      - name: PowerShell 7 installer tests
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/test_installer.ps1
+      - name: Windows shell installer smoke test
         if: runner.os == 'Windows'
         shell: bash
         run: |

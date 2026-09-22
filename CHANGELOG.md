@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Add a native Windows PowerShell installer and reorganize installation and getting-started documentation.
 - Add a single shell installer with platform detection, checksum verification, per-user installation, and persistent shell/Windows PATH setup.
 
 ## 0.1.0 — 2026-09-22

@@ -12,59 +12,91 @@ Fourteen built-in tiles cover system metrics, processes, battery, temperatures, 
 
 Slate, amber, and monochrome themes use muted borders, padded cards, and slim usage bars. Larger tiles show oversized values, memory/network history graphs, and per-core CPU bars. Editing adds dotted grid guides and shaded placement previews; success notices fade after four seconds. Previews use sample data; live tiles display your machine's metrics.
 
-## Download or build
+[Install](#install) · [Get started](#start-your-dashboard) · [Controls](#edit-your-dashboard) · [Tiles](#available-tiles) · [Layouts](#responsive-rules) · [Development](#development)
 
-Install the latest release with one command:
+## Install
+
+### Linux, macOS, and WSL
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/LimePencil/tileboard/main/install.sh | sh
 ```
 
-The installer detects your OS and CPU, verifies the release's SHA-256 checksum, and installs `tileboard` in `~/.local/bin` without sudo. It adds that directory to your shell's startup files. Open a new terminal, then run `tileboard`; the installer also prints a command to update your current terminal. Rerun the installer to upgrade. Your layouts and settings are preserved.
+Installs to `~/.local/bin` and adds it to your shell's startup files. Open a new terminal, then run `tileboard`. The installer also prints a command to update your current terminal. Bash, Zsh, Fish, and POSIX-style shells are supported. WSL uses the Linux binary.
 
-Supported shells are Bash, Zsh, Fish, and POSIX-style shells. On **Windows x64**, run the command in **Git Bash, MSYS2, or Cygwin**; it also updates your Windows User PATH. Restart your terminal application to pick up that change. WSL installs the Linux binary. For native PowerShell installation, download and extract the Windows archive below.
+Requires `curl`, `tar`, and one of `sha256sum`, `shasum`, or `openssl`.
 
-Requires `curl`, `tar` (or `unzip` on Windows), and one of `sha256sum`, `shasum`, or `openssl`. Linux requires glibc 2.35+; Alpine/musl and unsupported platforms need a source build.
+### Windows PowerShell
 
-To select a release or installation directory:
+Run in **Windows PowerShell 5.1 or PowerShell 7+** on Windows x64:
+
+```powershell
+irm https://raw.githubusercontent.com/LimePencil/tileboard/main/install.ps1 | iex
+tileboard
+```
+
+Installs to `$env:LOCALAPPDATA\Tileboard\bin` and updates both Windows User PATH and the current PowerShell session. Restart other terminal applications to pick up the change. No administrator privileges, Git Bash, or execution-policy changes are required for this command.
+
+If you prefer Git Bash, MSYS2, or Cygwin, use the `install.sh` command above. That installer requires `unzip`, installs to `~/.local/bin`, and updates Windows User PATH as well.
+
+### Versions and options
+
+Both installers detect the platform, download the latest release, and verify its SHA-256 checksum before replacing an existing binary. Rerun your installation command to upgrade; your layouts and settings are preserved. You can inspect [install.sh](install.sh) or [install.ps1](install.ps1) before running them.
+
+To pin a release or choose an installation directory:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/LimePencil/tileboard/main/install.sh | sh -s -- \
   --version 0.1.0 --bin-dir "$HOME/.local/bin"
 ```
 
-Use `--no-modify-path` to manage PATH yourself, `--shell bash|zsh|fish|sh` to override shell detection, or `--profile /absolute/path` to select a startup file. Zsh respects `ZDOTDIR`; Fish respects `XDG_CONFIG_HOME`. View all options with `sh -s -- --help`, or [read the installer](install.sh) before running it. To uninstall, remove the installed binary and its `# Tileboard` startup entries (and Windows User PATH entry, if applicable).
-
-Download **v0.1.0** from [GitHub Releases](https://github.com/LimePencil/tileboard/releases/latest). Extract the archive for your OS and architecture, then run `./tileboard` (Linux/macOS) or `.\tileboard.exe` (PowerShell). Each archive includes example layouts and documentation. `SHA256SUMS` lists the archive checksums.
-
-| Platform | Archive target |
-| --- | --- |
-| Linux x64 | `x86_64-unknown-linux-gnu` |
-| Linux ARM64 | `aarch64-unknown-linux-gnu` |
-| macOS Intel | `x86_64-apple-darwin` |
-| macOS Apple Silicon | `aarch64-apple-darwin` |
-| Windows x64 | `x86_64-pc-windows-msvc` |
-
-Linux release binaries are built on Ubuntu 22.04 (glibc 2.35 or newer). macOS builds target macOS 11 or newer. These are unsigned command-line binaries. Source builds remain available if a prebuilt archive does not fit your system.
-
-To build from source, install [Rust](https://rustup.rs/) (1.95 or newer; current stable recommended), then:
-
-```sh
-cargo run --release --locked
+```powershell
+& ([scriptblock]::Create((irm https://raw.githubusercontent.com/LimePencil/tileboard/main/install.ps1))) `
+  -Version 0.1.0 -BinDir "$env:LOCALAPPDATA\Tileboard\bin"
 ```
 
-Or install the binary:
+| Option | Shell installer | PowerShell installer |
+| --- | --- | --- |
+| Release version | `--version VERSION` | `-Version VERSION` |
+| Absolute install directory | `--bin-dir PATH` | `-BinDir PATH` |
+| Leave PATH unchanged | `--no-modify-path` | `-NoModifyPath` |
+| Override detected shell | `--shell bash`, `zsh`, `fish`, or `sh` | Not needed |
+| Choose startup file | `--profile /absolute/path` | Not needed |
+
+The shell installer respects `ZDOTDIR` for Zsh and `XDG_CONFIG_HOME` for Fish. To uninstall, delete the installed binary and remove its PATH entry. For shell installs, remove the corresponding `# Tileboard` lines from your startup files. Configuration files are kept separately.
+
+### Manual download and supported platforms
+
+Download an archive from [GitHub Releases](https://github.com/LimePencil/tileboard/releases/latest), extract it, then run `./tileboard` on Linux/macOS or `.\tileboard.exe` in PowerShell. Archives include documentation and example layouts; `SHA256SUMS` lists their checksums. Manual extraction does not update PATH.
+
+| Platform | Architecture | Requirement / archive target |
+| --- | --- | --- |
+| Linux | x64, ARM64 | glibc 2.35+; `x86_64-unknown-linux-gnu` / `aarch64-unknown-linux-gnu` |
+| macOS | Intel, Apple Silicon | macOS 11+; `x86_64-apple-darwin` / `aarch64-apple-darwin` |
+| Windows | x64 | `x86_64-pc-windows-msvc` |
+
+Release binaries are unsigned. Alpine/musl, Windows ARM64, and other unsupported targets need a source build.
+
+### Build from source
+
+Install [Rust](https://rustup.rs/) 1.95 or newer, then clone and install:
 
 ```sh
+git clone https://github.com/LimePencil/tileboard.git
+cd tileboard
 cargo install --path . --locked
 tileboard
 ```
 
-Linux, macOS, and Windows are CI targets. Use a UTF-8 terminal; SSH works when the terminal forwards input and resize events. Mouse support depends on the terminal. Every editing operation is available from the keyboard.
+For development, use `cargo run --release --locked` from the checkout.
 
-Existing configuration files and layouts are preserved. Replace a tile in place with **e → select → r**, or add one in free space with **e → a**, or try the six-tile layout with `cargo run --release -- --config examples/dashboard.toml`.
+## Start your dashboard
 
-The first launch creates a default configuration in the platform's user configuration directory. To keep a configuration in a known location:
+Run `tileboard` in a UTF-8 terminal. The first launch creates a default configuration in your platform's user configuration directory. SSH works when the terminal forwards input and resize events; all editing operations are available from the keyboard.
+
+Press **e** to edit, **Tab** to select a tile, and the **arrow keys** to move or swap it. Press **t** for settings, **a** to add, **r** to replace, or **c** to change theme. Press **s** to save. Outside edit mode, **r** reloads your configuration and **q** exits.
+
+To use a configuration at a specific location:
 
 ```sh
 tileboard --config ./dashboard.toml
@@ -72,7 +104,16 @@ tileboard --config ./dashboard.toml --check
 tileboard --print-default-config
 ```
 
-`--check` validates an existing file without starting the UI or creating a file. Invalid configurations produce an error and remain untouched.
+The first command creates a default layout if the file does not exist. `--check` only validates an existing file; it never creates or changes one. `--print-default-config` prints the default TOML.
+
+Example layouts are included in the [release archives](https://github.com/LimePencil/tileboard/releases/latest) and [source checkout](examples). With `tileboard` on PATH, run these commands from the directory containing `examples`:
+
+```sh
+tileboard --config examples/dashboard.toml
+tileboard --config examples/all-tiles.toml
+```
+
+The full gallery works best at **160×54** or larger. The one-line installers install only the executable; download an archive or clone the repository to get these examples. Relative file and repository paths resolve from the directory where you run Tileboard.
 
 ## Edit your dashboard
 
@@ -106,6 +147,51 @@ Moving into free space keeps the grid placement workflow. Resizing still require
 In settings, **Tab** changes fields, **Ctrl+u** clears the current field, and **Enter** applies. Left/Right and Home/End move the text cursor; Backspace/Delete edit text, and bracketed paste is supported. In the accent field, Left/Right cycles colors. Long fields scroll to keep the cursor visible. Colors: `cyan`, `magenta`, `green`, `yellow`, `blue`, `red`, `white`. The clock accepts a Chrono/strftime format such as `%H:%M:%S` or `%I:%M %p`. Storage accepts an exact mount path; leave it empty to show all mounts. Network accepts an exact interface name; leave it empty to display the busiest interface (excluding `lo`/`lo0`). Unavailable interfaces stay unavailable instead of silently substituting another one.
 
 Outside edit mode, **r** reloads TOML and **q** exits. **Ctrl+c** exits immediately and discards unsaved edits. Saving writes a temporary file in the config directory before replacing the old file. It serializes the configuration, so hand-written comments and formatting are not preserved. Avoid editing the TOML externally during an active UI edit session.
+
+## Available tiles
+
+| Kind | Shows / settings | Default refresh |
+| --- | --- | --- |
+| `cpu` | Total CPU, history, per-core bars | 1 s |
+| `memory` | RAM, swap, history | 2 s |
+| `network` | Receive/send rates; optional interface | 1 s |
+| `storage` | Free/used space; optional mount | 10 s |
+| `clock` | Local time; strftime format | 1 s |
+| `system` | Uptime, host, OS, CPU count | 5 s |
+| `processes` | Top processes; sort by `cpu` or `memory`, name filter | 2 s |
+| `battery` | Charge, state, health, remaining-time estimate when available | 30 s |
+| `temperature` | Hottest sensors first; name filter, Celsius/Fahrenheit | 5 s |
+| `calendar` | Current month with today highlighted; Monday/Sunday week start | 1 min |
+| `git` | Branch/upstream summary, changed/staged/untracked files; repository path | 5 s |
+| `service` | HTTP status and response time; URL checked with HEAD | 30 s |
+| `weather` | Temperature, feels-like, humidity, conditions; latitude/longitude and units | 10 min |
+| `usage` | Used/limit, percentage, remaining quota, reset text; JSON file or endpoint | 1 min |
+
+The gallery contains example sources: this repository, a local health endpoint, Seoul weather, and a clearly labeled sample usage report. Existing user layouts are never replaced automatically. The gallery's calendar and process tiles need wider/taller slots; smaller slots show “Enlarge tile.”
+
+Process CPU uses **100% per logical CPU**, so a multithreaded process can exceed 100%; `CPU¹` marks this convention. Its first sample warms up. Temperature and battery availability depend on OS/hardware support; missing hardware is shown explicitly. Battery collection uses [starship-battery](https://docs.rs/starship-battery/latest/starship_battery/).
+
+Git requires the `git` executable and reads the local checkout without fetching. Relative file/repository paths are resolved from the application's working directory. Service checks use HEAD: only 2xx is healthy, and redirects are reported without being followed. Weather uses [Open-Meteo](https://open-meteo.com/en/docs); blank coordinates make no request. Source workers are separate from system sampling and from one another, with five-second HTTP/Git timeouts. Tiles of the same external source share that source's worker.
+
+### Usage reports
+
+The usage tile is a configurable report reader; it does **not** automatically connect to an account or estimate a provider's quota. Set `source` to a regular JSON file or HTTP(S) endpoint returning:
+
+```json
+{"used": 1250, "limit": 5000, "unit": "requests", "reset_at": "2026-10-01T00:00:00Z"}
+```
+
+`used` must be nonnegative and `limit` positive. `unit` and `reset_at` are optional; reset text is displayed as provided. For an authenticated endpoint, set `token_env` to the name of an environment variable containing a bearer token. The token itself stays outside TOML. An account-specific exporter or endpoint must supply the report; [examples/usage.json](examples/usage.json) is sample data. Missing, malformed, oversized, or unreachable reports show an error instead of a fabricated usage value.
+
+## Tile refresh intervals
+
+Every tile instance has its own schedule. Press **e**, select a tile with **Tab**, press **t**, and edit **Refresh interval (ms)**. **Shift+Tab** from the title jumps to that field. Press **Enter** to apply, then **s** to save. You can also set `refresh_ms` in that tile's TOML table.
+
+Default intervals are listed in [Available tiles](#available-tiles).
+
+Intervals accept whole milliseconds from **250 to 86,400,000** (24 hours). Omitting `refresh_ms` uses the tile author's default. The bottom border shows the configured interval.
+
+Each tile keeps its own last sample and history; redrawing or refreshing another tile does not change it. Only the visible profile requests updates. A tile samples when first shown, then waits its configured interval after each delivered update; polling and collection add some delay. Overdue tiles resume once without catch-up bursts. Changing its interval or data options restarts that tile's sampling state. Simultaneously due tiles can share system collection, while keeping independent displayed snapshots. A request taking over five seconds shows “delayed”; a deliberately long interval does not.
 
 ## Responsive rules
 
@@ -160,62 +246,6 @@ rows = 4
 Positions start at zero. A tile may span any number of cells within its grid. Each profile defines its own tiles and settings; omit a tile from a profile to hide it at that size. Grid dimensions range from 1 to 64. Terminal cells are distributed proportionally, including leftover columns/rows. Aspect means terminal columns divided by rows, not a physical pixel ratio.
 
 Grid dimensions and responsive rules are edited in TOML; tile placement and settings are also editable in the UI. Tiles below their minimum readable size show a compact placeholder. Terminals smaller than 26×10 show a resize prompt. Swaps affect only the selected tile and its destination. There is no cascading rearrangement or scrolling.
-
-## Available tiles
-
-| Kind | Shows / settings | Default refresh |
-| --- | --- | --- |
-| `cpu` | Total CPU, history, per-core bars | 1 s |
-| `memory` | RAM, swap, history | 2 s |
-| `network` | Receive/send rates; optional interface | 1 s |
-| `storage` | Free/used space; optional mount | 10 s |
-| `clock` | Local time; strftime format | 1 s |
-| `system` | Uptime, host, OS, CPU count | 5 s |
-| `processes` | Top processes; sort by `cpu` or `memory`, name filter | 2 s |
-| `battery` | Charge, state, health, remaining-time estimate when available | 30 s |
-| `temperature` | Hottest sensors first; name filter, Celsius/Fahrenheit | 5 s |
-| `calendar` | Current month with today highlighted; Monday/Sunday week start | 1 min |
-| `git` | Branch/upstream summary, changed/staged/untracked files; repository path | 5 s |
-| `service` | HTTP status and response time; URL checked with HEAD | 30 s |
-| `weather` | Temperature, feels-like, humidity, conditions; latitude/longitude and units | 10 min |
-| `usage` | Used/limit, percentage, remaining quota, reset text; JSON file or endpoint | 1 min |
-
-Try the complete gallery in a terminal around **160×54** or larger:
-
-```sh
-cargo run --release -- --config examples/all-tiles.toml
-```
-
-The gallery contains example sources: this repository, a local health endpoint, Seoul weather, and a clearly labeled sample usage report. Existing user layouts are never replaced automatically. The gallery's calendar and process tiles need wider/taller slots; smaller slots show “Enlarge tile.”
-
-Process CPU uses **100% per logical CPU**, so a multithreaded process can exceed 100%; `CPU¹` marks this convention. Its first sample warms up. Temperature and battery availability depend on OS/hardware support; missing hardware is shown explicitly. Battery collection uses [starship-battery](https://docs.rs/starship-battery/latest/starship_battery/).
-
-Git requires the `git` executable and reads the local checkout without fetching. Relative file/repository paths are resolved from the application's working directory. Service checks use HEAD: only 2xx is healthy, and redirects are reported without being followed. Weather uses [Open-Meteo](https://open-meteo.com/en/docs); blank coordinates make no request. Source workers are separate from system sampling and from one another, with five-second HTTP/Git timeouts. Tiles of the same external source share that source's worker.
-
-### Usage reports
-
-The usage tile is a configurable report reader; it does **not** automatically connect to an account or estimate a provider's quota. Set `source` to a regular JSON file or HTTP(S) endpoint returning:
-
-```json
-{"used": 1250, "limit": 5000, "unit": "requests", "reset_at": "2026-10-01T00:00:00Z"}
-```
-
-`used` must be nonnegative and `limit` positive. `unit` and `reset_at` are optional; reset text is displayed as provided. For an authenticated endpoint, set `token_env` to the name of an environment variable containing a bearer token. The token itself stays outside TOML. An account-specific exporter or endpoint must supply the report; [examples/usage.json](examples/usage.json) is sample data. Missing, malformed, oversized, or unreachable reports show an error instead of a fabricated usage value.
-
-## Tile refresh intervals
-
-Every tile instance has its own schedule. Press **e**, select a tile with **Tab**, press **t**, and edit **Refresh interval (ms)**. **Shift+Tab** from the title jumps to that field. Press **Enter** to apply, then **s** to save. You can also set `refresh_ms` in that tile's TOML table.
-
-| Tile | Default interval |
-| --- | --- |
-| CPU, clock, network | 1 second |
-| Memory | 2 seconds |
-| System | 5 seconds |
-| Storage | 10 seconds |
-
-Intervals accept whole milliseconds from **250 to 86,400,000** (24 hours). Omitting `refresh_ms` uses the tile author's default. The bottom border shows the configured interval.
-
-Each tile keeps its own last sample and history; redrawing or refreshing another tile does not change it. Only the visible profile requests updates. A tile samples when first shown, then waits its configured interval after each delivered update; polling and collection add some delay. Overdue tiles resume once without catch-up bursts. Changing its interval or data options restarts that tile's sampling state. Simultaneously due tiles can share system collection, while keeping independent displayed snapshots. A request taking over five seconds shows “delayed”; a deliberately long interval does not.
 
 ## Write a Rust tile
 
@@ -283,7 +313,7 @@ The smoke test uses isolated temporary configs. The preview example renders the 
 
 Two GitHub Actions workflows serve different purposes:
 
-- **CI** runs for pull requests and pushes/merges to `main`: formatting, Clippy, tests on Linux/macOS/Windows, config checks, and a Linux terminal smoke test. Tags do not trigger this workflow.
+- **CI** runs for pull requests and pushes/merges to `main`: formatting, Clippy, tests on Linux/macOS/Windows, shell and PowerShell installer checks, config checks, and a Linux terminal smoke test. Tags do not trigger this workflow.
 - **Release** runs when a GitHub release is published. It verifies the tag matches `Cargo.toml` and `Cargo.lock`, runs native tests, builds five platform binaries, checks their version and example configs, and uploads archives plus `SHA256SUMS` once all builds succeed. Publishing a draft triggers the workflow; merely saving a draft does not.
 
 To release a new version:
@@ -291,13 +321,5 @@ To release a new version:
 1. Update `Cargo.toml`, `Cargo.lock`, and `CHANGELOG.md`, merge the changes, and wait for CI to pass.
 2. Create and push an annotated `vX.Y.Z` tag at that commit.
 3. Publish a GitHub release for the tag. Release assets appear after the **Release** workflow succeeds.
-
-For example, from a clean checkout of the approved release commit:
-
-```sh
-git tag -a v0.1.0 -m "Tileboard 0.1.0"
-git push origin v0.1.0
-gh release create v0.1.0 --verify-tag --title "Tileboard 0.1.0" --notes-file CHANGELOG.md
-```
 
 The Release workflow also has a manual **Run workflow** input for rebuilding an existing release tag after an infrastructure failure. Normal publishing uses `GITHUB_TOKEN`; no personal access token is required. Cargo registry publication is disabled; versions are distributed through GitHub Releases.
