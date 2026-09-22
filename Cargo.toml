@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.95"
 description = "A customizable terminal dashboard with a responsive snapping grid"
+repository = "https://github.com/LimePencil/tileboard"
+readme = "README.md"
 publish = false
 
 [dependencies]

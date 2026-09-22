@@ -1,5 +1,7 @@
 # Tileboard
 
+[![CI](https://github.com/LimePencil/tileboard/actions/workflows/ci.yml/badge.svg)](https://github.com/LimePencil/tileboard/actions/workflows/ci.yml) [![Release](https://github.com/LimePencil/tileboard/actions/workflows/release.yml/badge.svg)](https://github.com/LimePencil/tileboard/actions/workflows/release.yml)
+
 A Rust terminal dashboard with a snapping grid, spanning tiles, and layouts you control.
 
 Fourteen built-in tiles cover system metrics, processes, battery, temperatures, calendars, Git, services, weather, and usage quotas. Tiles are ordinary Rust modules compiled into the application. Layouts, titles, colors, and tile settings live in TOML and can change without rebuilding.
@@ -10,9 +12,21 @@ Fourteen built-in tiles cover system metrics, processes, battery, temperatures, 
 
 Slate, amber, and monochrome themes use muted borders, padded cards, and slim usage bars. Larger tiles show oversized values, memory/network history graphs, and per-core CPU bars. Editing adds dotted grid guides and shaded placement previews; success notices fade after four seconds. Previews use sample data; live tiles display your machine's metrics.
 
-## Run
+## Download or build
 
-Install [Rust](https://rustup.rs/) (1.95 or newer; current stable recommended), then:
+Download **v0.1.0** from [GitHub Releases](https://github.com/LimePencil/tileboard/releases/latest). Extract the archive for your OS and architecture, then run `./tileboard` (Linux/macOS) or `.\tileboard.exe` (PowerShell). Each archive includes example layouts and documentation. `SHA256SUMS` lists the archive checksums.
+
+| Platform | Archive target |
+| --- | --- |
+| Linux x64 | `x86_64-unknown-linux-gnu` |
+| Linux ARM64 | `aarch64-unknown-linux-gnu` |
+| macOS Intel | `x86_64-apple-darwin` |
+| macOS Apple Silicon | `aarch64-apple-darwin` |
+| Windows x64 | `x86_64-pc-windows-msvc` |
+
+Linux release binaries are built on Ubuntu 22.04 (glibc 2.35 or newer). macOS builds target macOS 11 or newer. These are unsigned command-line binaries. Source builds remain available if a prebuilt archive does not fit your system.
+
+To build from source, install [Rust](https://rustup.rs/) (1.95 or newer; current stable recommended), then:
 
 ```sh
 cargo run --release --locked
@@ -243,3 +257,26 @@ cargo run --locked --example preview -- docs/previews
 ```
 
 The smoke test uses isolated temporary configs. The preview example renders the actual UI with fixed sample data into SVG files; it never reads live system metrics.
+
+## CI and releases
+
+Two GitHub Actions workflows serve different purposes:
+
+- **CI** runs for pull requests and pushes/merges to `main`: formatting, Clippy, tests on Linux/macOS/Windows, config checks, and a Linux terminal smoke test. Tags do not trigger this workflow.
+- **Release** runs when a GitHub release is published. It verifies the tag matches `Cargo.toml` and `Cargo.lock`, runs native tests, builds five platform binaries, checks their version and example configs, and uploads archives plus `SHA256SUMS` once all builds succeed. Publishing a draft triggers the workflow; merely saving a draft does not.
+
+To release a new version:
+
+1. Update `Cargo.toml`, `Cargo.lock`, and `CHANGELOG.md`, merge the changes, and wait for CI to pass.
+2. Create and push an annotated `vX.Y.Z` tag at that commit.
+3. Publish a GitHub release for the tag. Release assets appear after the **Release** workflow succeeds.
+
+For example, from a clean checkout of the approved release commit:
+
+```sh
+git tag -a v0.1.0 -m "Tileboard 0.1.0"
+git push origin v0.1.0
+gh release create v0.1.0 --verify-tag --title "Tileboard 0.1.0" --notes-file CHANGELOG.md
+```
+
+The Release workflow also has a manual **Run workflow** input for rebuilding an existing release tag after an infrastructure failure. Normal publishing uses `GITHUB_TOKEN`; no personal access token is required. Cargo registry publication is disabled; versions are distributed through GitHub Releases.

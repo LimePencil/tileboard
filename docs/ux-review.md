@@ -56,7 +56,7 @@ The SVGs in [previews](previews/) are generated from Ratatui's actual rendered c
 
 ## Remaining boundaries
 
-- Native macOS/Windows runtime and terminal-specific mouse behavior need those environments. CI is configured for all three operating systems; the previous GitHub run was blocked by account billing/spending limits.
+- CI runs native tests on Linux, macOS, and Windows; the Release workflow also tests each binary target before packaging. Terminal-specific mouse behavior still needs verification in the terminal applications being used.
 - Small default profiles show a subset of tiles, as declared in TOML. Editing a different profile while the terminal is small can still yield compact placeholders; enlarge the terminal to preview that layout at its intended size.
 - Tile content remains display-only. Grid rules still live in TOML; the UI edits placement and tile settings.
 - Adding a separate tile needs free space. Replacement works in occupied slots, and swaps work on a full grid without changing unrelated tiles.
