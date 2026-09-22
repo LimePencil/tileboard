@@ -1,8 +1,8 @@
 use chrono::{Local, TimeZone};
 use ratatui::{Terminal, backend::TestBackend, layout::Rect};
 use std::{
-    io::{Read, Write},
-    net::TcpListener,
+    io::{BufRead, BufReader, Read, Write},
+    net::{TcpListener, TcpStream},
     process::Command,
     sync::mpsc,
     thread,
@@ -11,7 +11,7 @@ use std::{
 use tileboard::{
     config::{Config, TileConfig},
     integrations::{self, ExternalData},
-    metrics::{Collector, Metrics, ProcessUsage, SampleRequest, Source, Temperature},
+    metrics::{Collector, Metrics, ProcessUsage, SampleRequest, SampleResult, Source, Temperature},
     tiles::Registry,
 };
 
@@ -253,4 +253,167 @@ fn slow_service_does_not_block_system_collection_and_options_reach_worker() {
         assert!(Instant::now() < deadline);
         thread::sleep(Duration::from_millis(10));
     }
+}
+
+fn service_listener() -> TcpListener {
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    listener.set_nonblocking(true).unwrap();
+    listener
+}
+
+fn request_service(collector: &Collector, listener: &TcpListener, id: &str, generation: u64) {
+    collector
+        .request(SampleRequest {
+            key: ("test".into(), id.into(), "service".into()),
+            generation,
+            sources: &[Source::Service],
+            options: toml::Table::from_iter([(
+                "url".into(),
+                format!("http://{}/{id}", listener.local_addr().unwrap()).into(),
+            )]),
+        })
+        .unwrap();
+}
+
+fn accept_service(listener: &TcpListener, timeout: Duration) -> Option<(String, TcpStream)> {
+    let deadline = Instant::now() + timeout;
+    loop {
+        match listener.accept() {
+            Ok((mut socket, _)) => {
+                socket
+                    .set_read_timeout(Some(Duration::from_secs(2)))
+                    .unwrap();
+                let mut request = String::new();
+                let mut reader = BufReader::new(&mut socket);
+                reader.read_line(&mut request).unwrap();
+                assert!(request.starts_with("HEAD /"));
+                loop {
+                    let mut header = String::new();
+                    assert!(reader.read_line(&mut header).unwrap() > 0);
+                    if header == "\r\n" {
+                        break;
+                    }
+                }
+                return Some((request, socket));
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                if Instant::now() >= deadline {
+                    return None;
+                }
+                thread::sleep(Duration::from_millis(5));
+            }
+            Err(error) => panic!("Cannot accept service check: {error}"),
+        }
+    }
+}
+
+fn respond_service(mut socket: TcpStream, status: u16) {
+    write!(
+        socket,
+        "HTTP/1.1 {status} Test\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+    )
+    .unwrap();
+}
+
+fn next_sample(collector: &Collector) -> SampleResult {
+    let deadline = Instant::now() + Duration::from_secs(2);
+    loop {
+        if let Some(result) = collector.drain().next() {
+            return result;
+        }
+        assert!(Instant::now() < deadline, "Collector failed to answer");
+        thread::sleep(Duration::from_millis(5));
+    }
+}
+
+#[test]
+fn fast_service_completes_while_another_service_is_stalled() {
+    let listener = service_listener();
+    let collector = Collector::start();
+    request_service(&collector, &listener, "slow", 1);
+    let (request, slow) = accept_service(&listener, Duration::from_secs(2)).unwrap();
+    assert!(request.starts_with("HEAD /slow "));
+
+    request_service(&collector, &listener, "fast", 42);
+    let (request, fast) = accept_service(&listener, Duration::from_secs(2))
+        .expect("A slow service must leave capacity for another service tile");
+    assert!(request.starts_with("HEAD /fast "));
+    respond_service(fast, 204);
+    let result = next_sample(&collector);
+    assert_eq!(result.request.key.1, "fast");
+    assert_eq!(result.request.generation, 42);
+    assert!(matches!(
+        result.metrics.external,
+        Some(Ok(ExternalData::Service { status: 204, .. }))
+    ));
+    assert!(collector.drain().next().is_none());
+
+    respond_service(slow, 503);
+    let result = next_sample(&collector);
+    assert_eq!(result.request.key.1, "slow");
+    assert_eq!(result.request.generation, 1);
+    assert!(matches!(
+        result.metrics.external,
+        Some(Ok(ExternalData::Service { status: 503, .. }))
+    ));
+}
+
+#[test]
+fn service_concurrency_is_bounded_and_queued_work_resumes() {
+    let listener = service_listener();
+    let collector = Collector::start();
+    request_service(&collector, &listener, "first", 1);
+    let (_, first) = accept_service(&listener, Duration::from_secs(2)).unwrap();
+    request_service(&collector, &listener, "second", 2);
+    let (_, second) = accept_service(&listener, Duration::from_secs(2)).unwrap();
+    request_service(&collector, &listener, "queued", 3);
+    assert!(accept_service(&listener, Duration::from_millis(150)).is_none());
+
+    // Filling the service pool must leave other external sources available.
+    let directory = tempfile::tempdir().unwrap();
+    let path = directory.path().join("usage.json");
+    std::fs::write(&path, r#"{"used":25,"limit":100}"#).unwrap();
+    collector
+        .request(SampleRequest {
+            key: ("test".into(), "usage".into(), "usage".into()),
+            generation: 4,
+            sources: &[Source::Usage],
+            options: toml::Table::from_iter([(
+                "source".into(),
+                path.to_string_lossy().into_owned().into(),
+            )]),
+        })
+        .unwrap();
+    let result = next_sample(&collector);
+    assert_eq!(result.request.key.1, "usage");
+    assert!(matches!(
+        result.metrics.external,
+        Some(Ok(ExternalData::Usage(_)))
+    ));
+
+    respond_service(first, 200);
+    let (request, queued) = accept_service(&listener, Duration::from_secs(2))
+        .expect("Queued work must resume when a worker becomes available");
+    assert!(request.starts_with("HEAD /queued "));
+    assert_eq!(next_sample(&collector).request.key.1, "first");
+    respond_service(queued, 200);
+    assert_eq!(next_sample(&collector).request.key.1, "queued");
+    respond_service(second, 200);
+    assert_eq!(next_sample(&collector).request.key.1, "second");
+}
+
+#[test]
+fn dropping_collector_discards_queued_service_checks() {
+    let listener = service_listener();
+    let collector = Collector::start();
+    request_service(&collector, &listener, "first", 1);
+    let (_, first) = accept_service(&listener, Duration::from_secs(2)).unwrap();
+    request_service(&collector, &listener, "second", 2);
+    let (_, second) = accept_service(&listener, Duration::from_secs(2)).unwrap();
+    request_service(&collector, &listener, "queued", 3);
+    drop(collector);
+
+    respond_service(first, 200);
+    respond_service(second, 200);
+    assert!(accept_service(&listener, Duration::from_millis(200)).is_none());
 }

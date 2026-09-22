@@ -12,12 +12,16 @@ use crate::{
     app::{App, Candidate, Modal},
     grid::Placement,
     theme,
-    tiles::accent,
+    tiles::{accent, plain_text},
 };
 
 pub const HELP_LINES: &[&str] = &[
     "DASHBOARD",
     "e edit layout · r reload TOML · q quit",
+    "p: choose saved profile or Auto",
+    "[ / ]: previous / next saved profile",
+    "Profile choices save immediately and survive restarts.",
+    "Auto follows terminal size; manual choices stay selected.",
     "",
     "LAYOUT EDITOR",
     "Tab / Shift+Tab: next / previous tile",
@@ -29,19 +33,24 @@ pub const HELP_LINES: &[&str] = &[
     "Enter: apply preview · Esc: discard preview",
     "Drag a tile to move; drag ◢ to resize",
     "a add · r replace · d delete · t settings · u undo",
-    "p: edit next responsive profile · c: cycle theme",
+    "p: edit next profile · c: cycle theme",
+    "g: profile name, grid dimensions, and resize rules",
+    "n: save a copy as a named profile",
+    "New copies are manual; enable automatic in g settings.",
     "Refresh interval: milliseconds, 250–86400000",
     "s: save all edits and return to live",
     "Esc without a preview: cancel entire session",
     "",
-    "SETTINGS",
+    "TILE / PROFILE SETTINGS",
     "Tab: next field · Ctrl+u: clear field",
     "Left/Right, Home/End: move text cursor",
     "Backspace/Delete: remove text · paste supported",
-    "Enter: apply · Esc: cancel settings",
+    "Enter: stage changes · Esc: cancel settings",
+    "Profile rules: leave optional maximum/aspect limits blank.",
+    "Automatic: true / false; keep an automatic fallback.",
     "",
     "Tile edits affect this profile; themes apply everywhere.",
-    "Edit grid dimensions and resize rules in TOML.",
+    "Saved profiles include their complete tile layout.",
     "Ctrl+c exits, discarding unsaved edits.",
     "",
     "↑/↓ or PgUp/PgDn scroll · Esc closes",
@@ -64,6 +73,12 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     }
     let status = app.visible_status(std::time::Instant::now()).to_string();
     let profile = &app.config.profiles[app.profile];
+    let profile_name = plain_text(&profile.name);
+    let profile_mode = if app.config.active_profile.is_some() {
+        "Manual"
+    } else {
+        "Auto"
+    };
     let dirty = app.is_dirty();
     let header = Line::from(vec![
         Span::styled(
@@ -86,7 +101,17 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         ),
         Span::styled(
             if area.width >= 55 {
-                format!("   {} · {}×{}", profile.name, profile.columns, profile.rows)
+                format!(
+                    "   {}×{} · {} {}",
+                    profile.columns,
+                    profile.rows,
+                    profile.tiles.len(),
+                    if profile.tiles.len() == 1 {
+                        "tile"
+                    } else {
+                        "tiles"
+                    }
+                )
             } else {
                 String::new()
             },
@@ -99,18 +124,11 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
     );
     let subtitle = if app.editing {
         format!(
-            " {} profile · {} {} · {}",
-            profile.name,
-            profile.tiles.len(),
-            if profile.tiles.len() == 1 {
-                "tile"
-            } else {
-                "tiles"
-            },
+            " {profile_mode} · {profile_name} · {}",
             if dirty { "unsaved" } else { "unchanged" }
         )
     } else {
-        " A little clarity for your terminal".into()
+        format!(" {profile_mode} · {profile_name}")
     };
     frame.render_widget(
         Paragraph::new(subtitle).style(Style::default().fg(theme::MUTED)),
@@ -280,7 +298,11 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
         Rect::new(area.x + 1, area.bottom() - 3, area.width - 2, 1),
     );
     let footer = match &app.modal {
-        Some(Modal::Settings { .. }) => "Tab field  Enter apply\nEsc close  Ctrl+u clear",
+        Some(Modal::Settings { .. } | Modal::ProfileSettings { .. }) => {
+            "Tab field  Enter apply\nEsc close  Ctrl+u clear"
+        }
+        Some(Modal::SaveProfile { .. }) => "Enter create copy\nEsc close  Ctrl+u clear",
+        Some(Modal::Profiles { .. }) => "↑/↓ select  Enter switch\nEsc close",
         Some(Modal::Add { replace: true, .. }) => "↑/↓ select  Enter replace\nEsc close",
         Some(Modal::Add { .. }) => "↑/↓ select  Enter add\nEsc close",
         Some(Modal::Help { .. }) => "↑/↓ scroll  Esc close",
@@ -288,12 +310,13 @@ pub fn draw(frame: &mut Frame, app: &mut App) {
             "Enter apply  Esc discard\nArrows move  h/l width  k/j height"
         }
         None if app.editing && area.width < 75 => {
-            "s save  Esc cancel  ? help\nTab select  r replace  t settings"
+            "s save  Esc cancel  ? help\ng profile  n copy  p next"
         }
         None if app.editing => {
-            "Tab select  arrows move  h/j/k/l resize  a add  r replace  t settings\ns save  Esc cancel  Enter apply  u undo  p profile  c theme  ? help"
+            "Tab select  arrows move  h/j/k/l resize  a add  r replace  t settings\ns save  Esc cancel  u undo  p next  g profile  n copy  c theme  ? help"
         }
-        _ => "e edit   ? help   q quit",
+        None if area.width < 50 => "p profiles  [/] switch\ne edit  ? help  q quit",
+        _ => "e edit  p profiles  [/] switch  ? help  q quit",
     };
     frame.render_widget(
         Paragraph::new(footer).style(Style::default().fg(if app.editing || app.modal.is_some() {
@@ -366,7 +389,61 @@ fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
                 None,
             )
         }
+        Modal::Profiles { selected } => {
+            let mut lines = Vec::with_capacity((app.config.profiles.len() + 1) * 2);
+            for index in 0..=app.config.profiles.len() {
+                let (name, details, active) = if index == 0 {
+                    (
+                        "Auto".to_string(),
+                        "Follow terminal size".to_string(),
+                        app.config.active_profile.is_none(),
+                    )
+                } else {
+                    let profile = &app.config.profiles[index - 1];
+                    (
+                        plain_text(&profile.name),
+                        format!(
+                            "{}×{} · {}",
+                            profile.columns,
+                            profile.rows,
+                            if profile.automatic {
+                                "automatic"
+                            } else {
+                                "manual only"
+                            }
+                        ),
+                        app.config.active_profile.as_deref() == Some(profile.name.as_str()),
+                    )
+                };
+                lines.push(
+                    Line::from(format!(
+                        "{} {name}{}",
+                        if index == *selected { "›" } else { " " },
+                        if active { " ✓" } else { "" }
+                    ))
+                    .style(Style::default().fg(if index == *selected {
+                        theme::YELLOW
+                    } else {
+                        theme::TEXT
+                    })),
+                );
+                lines.push(
+                    Line::from(format!("  {details}")).style(Style::default().fg(theme::MUTED)),
+                );
+            }
+            (" Profiles ", lines, None)
+        }
         Modal::Settings {
+            fields,
+            selected,
+            cursor,
+        }
+        | Modal::ProfileSettings {
+            fields,
+            selected,
+            cursor,
+        }
+        | Modal::SaveProfile {
             fields,
             selected,
             cursor,
@@ -395,7 +472,15 @@ fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
                 lines.push(Line::from(format!(" {shown}")));
                 lines.push(Line::from(""));
             }
-            (" Tile settings ", lines, cursor_row)
+            (
+                match modal {
+                    Modal::ProfileSettings { .. } => " Profile settings ",
+                    Modal::SaveProfile { .. } => " Save profile copy ",
+                    _ => " Tile settings ",
+                },
+                lines,
+                cursor_row,
+            )
         }
     };
     let max_height = area.height.saturating_sub(5);
@@ -414,7 +499,10 @@ fn draw_modal(frame: &mut Frame, app: &App, modal: &Modal) {
         .border_style(Style::default().fg(theme::CYAN));
     let visible = height.saturating_sub(2) as usize;
     let scroll = match modal {
-        Modal::Settings { selected, .. } => (selected * 3 + 2).saturating_sub(visible),
+        Modal::Settings { selected, .. }
+        | Modal::ProfileSettings { selected, .. }
+        | Modal::SaveProfile { selected, .. } => (selected * 3 + 2).saturating_sub(visible),
+        Modal::Profiles { selected } => (selected * 2 + 2).saturating_sub(visible),
         Modal::Add { selected, .. } => (selected + 3).saturating_sub(visible),
         _ => 0,
     };
@@ -436,6 +524,94 @@ mod tests {
     use super::*;
     use crate::{config::Config, metrics::Metrics, tiles::Registry};
     use ratatui::{Terminal, backend::TestBackend};
+
+    fn rendered_text(terminal: &Terminal<TestBackend>) -> String {
+        terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect()
+    }
+
+    #[test]
+    fn profile_selection_mode_and_name_remain_visible_on_small_screens() {
+        let mut config = Config::default();
+        config.profiles.last_mut().unwrap().name = "Desk\nwork".into();
+        let mut app = App::new(config, "unused.toml".into(), Registry::builtin());
+        let mut terminal = Terminal::new(TestBackend::new(26, 10)).unwrap();
+        terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+        assert!(rendered_text(&terminal).contains("Auto · Desk work"));
+        app.config.active_profile = Some("Desk\nwork".into());
+        terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+        assert!(rendered_text(&terminal).contains("Manual · Desk work"));
+    }
+
+    #[test]
+    fn profile_picker_scrolls_selected_profile_and_details_into_view() {
+        let mut config = Config::default();
+        let mut saved = config.profiles.last().unwrap().clone();
+        saved.name = "Saved\nwork".into();
+        saved.automatic = false;
+        let selected = config.profiles.len();
+        config.profiles.insert(selected - 1, saved);
+        let mut app = App::new(config, "unused.toml".into(), Registry::builtin());
+        app.modal = Some(Modal::Profiles { selected });
+        for (width, height) in [(26, 10), (38, 16), (120, 40), (30, 100)] {
+            let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
+            terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+            let output = rendered_text(&terminal);
+            assert!(output.contains("› Saved work"), "{width}×{height}");
+            assert!(output.contains("2×2 · manual only"), "{width}×{height}");
+        }
+        app.modal = Some(Modal::Profiles { selected: 0 });
+        let mut terminal = Terminal::new(TestBackend::new(26, 10)).unwrap();
+        terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+        assert!(rendered_text(&terminal).contains("› Auto ✓"));
+    }
+
+    #[test]
+    fn profile_forms_scroll_to_selected_field_and_keep_unicode_caret_visible() {
+        let mut app = App::new(Config::default(), "unused.toml".into(), Registry::builtin());
+        let value = "a long name with 한글 👨‍💻 final";
+        for (width, height) in [(26, 10), (38, 16), (120, 40), (30, 100)] {
+            for settings in [true, false] {
+                let mut fields = vec![("Earlier field".into(), String::new()); 9];
+                fields.push(("Profile name".into(), value.into()));
+                app.modal = Some(if settings {
+                    Modal::ProfileSettings {
+                        selected: fields.len() - 1,
+                        fields,
+                        cursor: value.len(),
+                    }
+                } else {
+                    Modal::SaveProfile {
+                        fields: vec![("Profile name".into(), value.into())],
+                        selected: 0,
+                        cursor: value.len(),
+                    }
+                });
+                let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
+                terminal.draw(|frame| draw(frame, &mut app)).unwrap();
+                let output = rendered_text(&terminal);
+                assert!(output.contains("Profile name"), "{width}×{height}");
+                assert!(output.contains("final"), "{width}×{height}");
+                assert!(output.contains(if settings {
+                    "Profile settings"
+                } else {
+                    "Save profile copy"
+                }));
+                let cursor = terminal.get_cursor_position().unwrap();
+                assert!(cursor.x < width - 2 && cursor.y < height - 3);
+                assert_eq!(
+                    terminal.backend().buffer()[(cursor.x, cursor.y)].symbol(),
+                    " "
+                );
+            }
+        }
+    }
+
     #[test]
     fn render_survives_tiny_wide_tall_and_edit_sizes() {
         let mut app = App::new(Config::default(), "unused.toml".into(), Registry::builtin());

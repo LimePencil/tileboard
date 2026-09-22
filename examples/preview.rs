@@ -33,6 +33,8 @@ fn main() -> anyhow::Result<()> {
         ("compact", 80, 24, false),
         ("small", 42, 28, false),
         ("settings", 38, 16, true),
+        ("profiles", 80, 24, false),
+        ("profile-settings", 80, 40, true),
         ("amber", 120, 30, false),
         ("mono", 120, 30, false),
         ("detail", 120, 44, false),
@@ -54,6 +56,15 @@ fn main() -> anyhow::Result<()> {
             "mono" => theme::Theme::Mono,
             _ => theme::Theme::Slate,
         };
+        if name == "profiles" {
+            let mut saved = app.config.profiles[1].clone();
+            saved.name = "Focus".into();
+            saved.automatic = false;
+            app.config.active_profile = Some(saved.name.clone());
+            let fallback = app.config.profiles.len() - 1;
+            app.config.profiles.insert(fallback, saved);
+            app.sync_tiles();
+        }
         let metrics = Metrics {
             ready: true,
             processes: vec![
@@ -173,6 +184,13 @@ fn main() -> anyhow::Result<()> {
             app.handle_key(KeyCode::Right.into());
         } else if name == "editor" {
             app.handle_key(KeyCode::Char('h').into());
+        } else if name == "profiles" {
+            app.handle_key(KeyCode::Char('p').into());
+        } else if name == "profile-settings" {
+            app.handle_key(KeyCode::Char('g').into());
+            for _ in 0..3 {
+                app.handle_key(KeyCode::Tab.into());
+            }
         } else if edit {
             app.handle_key(KeyCode::Char('t').into());
             app.handle_key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::CONTROL));
@@ -180,7 +198,7 @@ fn main() -> anyhow::Result<()> {
         }
         let mut terminal = Terminal::new(TestBackend::new(width, height))?;
         terminal.draw(|frame| ui::draw(frame, &mut app))?;
-        let cursor = (name == "settings")
+        let cursor = matches!(name, "settings" | "profile-settings")
             .then(|| terminal.get_cursor_position())
             .transpose()?;
         let buffer = terminal.backend().buffer();

@@ -149,7 +149,7 @@ pub fn option<'a>(config: &'a TileConfig, key: &str, fallback: &'a str) -> &'a s
 }
 
 /// External strings cannot add rows or terminal controls to a tile.
-fn plain_text(text: &str) -> String {
+pub(crate) fn plain_text(text: &str) -> String {
     text.chars()
         .map(|c| if c.is_control() { ' ' } else { c })
         .collect()

@@ -17,6 +17,9 @@ pub struct Config {
     pub version: u32,
     #[serde(default)]
     pub theme: crate::theme::Theme,
+    /// None selects a responsive layout; a name pins a saved profile.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active_profile: Option<String>,
     pub profiles: Vec<Profile>,
 }
 
@@ -24,6 +27,9 @@ pub struct Config {
 #[serde(deny_unknown_fields)]
 pub struct Profile {
     pub name: String,
+    /// Saved copies are manual unless explicitly enabled for responsive selection.
+    #[serde(default = "automatic_default", skip_serializing_if = "is_automatic")]
+    pub automatic: bool,
     #[serde(default)]
     pub min_width: u16,
     #[serde(default)]
@@ -56,6 +62,14 @@ pub struct TileConfig {
 
 fn default_accent() -> String {
     "cyan".into()
+}
+
+fn automatic_default() -> bool {
+    true
+}
+
+fn is_automatic(value: &bool) -> bool {
+    *value
 }
 
 impl Profile {
@@ -100,8 +114,15 @@ impl Config {
     pub fn profile_for(&self, width: u16, height: u16) -> usize {
         self.profiles
             .iter()
-            .position(|p| p.matches(width, height))
+            .position(|p| p.automatic && p.matches(width, height))
             .unwrap_or(self.profiles.len() - 1)
+    }
+
+    pub fn selected_profile(&self, width: u16, height: u16) -> usize {
+        self.active_profile
+            .as_ref()
+            .and_then(|name| self.profiles.iter().position(|p| &p.name == name))
+            .unwrap_or_else(|| self.profile_for(width, height))
     }
 
     pub fn validate(&self, registry: &Registry) -> Result<()> {
@@ -162,15 +183,22 @@ impl Config {
                     .with_context(|| format!("Profile {}, tile {}", profile.name, tile.id))?;
             }
         }
+        ensure!(
+            self.active_profile
+                .as_ref()
+                .is_none_or(|name| names.contains(name)),
+            "Active profile must name an existing profile"
+        );
         let fallback = self.profiles.last().unwrap();
         ensure!(
-            fallback.min_width == 0
+            fallback.automatic
+                && fallback.min_width == 0
                 && fallback.min_height == 0
                 && fallback.max_width.is_none()
                 && fallback.max_height.is_none()
                 && fallback.min_aspect.is_none()
                 && fallback.max_aspect.is_none(),
-            "The last profile must be an unconditional fallback (no size or aspect limits)"
+            "The last profile must be an automatic, unconditional fallback (no size or aspect limits)"
         );
         Ok(())
     }
@@ -258,6 +286,7 @@ impl Default for Config {
         };
         let profile = |name: &str, min_width, columns, rows, tiles| Profile {
             name: name.into(),
+            automatic: true,
             min_width,
             min_height: 0,
             max_width: None,
@@ -271,6 +300,7 @@ impl Default for Config {
         Self {
             version: 1,
             theme: crate::theme::Theme::default(),
+            active_profile: None,
             profiles: vec![
                 Profile {
                     min_height: 18,

@@ -46,7 +46,7 @@ cargo run --locked --example preview -- docs/previews
 cargo build --release --locked
 ```
 
-The 44 Rust tests cover geometry, config preservation, responsive selection, editor transactions, mouse resizing/collisions, Unicode fields, new tile values/unavailable states, network counter resets, legacy configurations, independent instance deadlines, paused profiles, stale response rejection, per-instance network rates, interval validation/persistence, themes, transient notices, packed-grid swaps, replacement, new tile states, JSON validation, local Git collection, and worker isolation during a stalled HTTP check.
+The original 44 Rust tests cover geometry, config preservation, responsive selection, editor transactions, mouse resizing/collisions, Unicode fields, new tile values/unavailable states, network counter resets, legacy configurations, independent instance deadlines, paused profiles, stale response rejection, per-instance network rates, interval validation/persistence, themes, transient notices, packed-grid swaps, replacement, new tile states, JSON validation, local Git collection, and worker isolation during a stalled HTTP check.
 
 The tmux smoke script creates an isolated terminal and temporary config, then exercises six live tiles, five terminal shapes, full-grid swap previews, blocked resizing, replacement/undo, mouse dragging, settings/paste, refresh interval and theme persistence, save/cancel, adding a network tile, a missing interface, recovery from a bad config reload, independent 250 ms and 4 s clocks, and clean exit. A separate 160×54 live-gallery run checked the new process collector, hardware availability states, local Git, usage-file loading, and setup prompts.
 
@@ -54,9 +54,17 @@ Visual review sizes: **160×54** (all fourteen tiles), **120×44**, **120×30** 
 
 The SVGs in [previews](previews/) are generated from Ratatui's actual rendered cell buffer with fixed sample metrics. They contain no live machine details. Font rendering may differ slightly from your terminal.
 
+## Saved profiles and grid settings
+
+The profile picker is available with **p** outside edit mode, with **[** / **]** for immediate previous/next selection. Manual selection is saved and survives terminal resizing and restarts; **Auto** restores responsive matching. The subtitle shows the mode and profile even on small screens. Failed selection saves preserve the current selection, and switching refuses to overwrite externally modified configuration.
+
+In edit mode, **g** opens profile/grid/rule settings and **n** creates a named independent copy. Copies start as manual-only layouts, leaving Auto matching unchanged. Both operations join the existing save/undo/cancel transaction. Grid shrinkage, duplicate names, invalid bounds, and loss of the required automatic fallback are rejected before changing the live configuration. Profile forms reuse the Unicode-aware settings editor and scroll the active field into view.
+
+The [profile picker](previews/profiles.svg) and [profile settings](previews/profile-settings.svg) previews use the actual UI with fixed fixture metrics. Regression tests cover saved selections, copies, reloads, undo/cancel, validation failures, small-screen forms, and stalled same-kind external requests.
+
 ## Remaining boundaries
 
 - CI runs native tests on Linux, macOS, and Windows; the Release workflow also tests each binary target before packaging. Terminal-specific mouse behavior still needs verification in the terminal applications being used.
 - Small default profiles show a subset of tiles, as declared in TOML. Editing a different profile while the terminal is small can still yield compact placeholders; enlarge the terminal to preview that layout at its intended size.
-- Tile content remains display-only. Grid rules still live in TOML; the UI edits placement and tile settings.
+- Tile content remains display-only. Profile order is edited in TOML; names, grid dimensions, rules, tile placement, and tile settings are editable in the UI.
 - Adding a separate tile needs free space. Replacement works in occupied slots, and swaps work on a full grid without changing unrelated tiles.

@@ -6,7 +6,7 @@
 <text x="111" y="26" fill="#10151f" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="54" lengthAdjust="spacingAndGlyphs"> LIVE </text>
 <rect x="165" y="12" width="225" height="18" fill="#10151f"/>
 <rect x="12" y="30" width="378" height="18" fill="#10151f"/>
-<text x="12" y="44" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="378" lengthAdjust="spacingAndGlyphs"> A little clarity for your terminal       </text>
+<text x="12" y="44" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="378" lengthAdjust="spacingAndGlyphs"> Auto · small                             </text>
 <rect x="12" y="48" width="378" height="18" fill="#10151f"/>
 <rect x="12" y="66" width="9" height="18" fill="#10151f"/>
 <rect x="21" y="66" width="9" height="18" fill="#161e2a"/>
@@ -193,9 +193,10 @@
 <rect x="381" y="462" width="9" height="18" fill="#10151f"/>
 <rect x="12" y="480" width="9" height="18" fill="#10151f"/>
 <rect x="21" y="480" width="360" height="18" fill="#10151f"/>
-<text x="21" y="494" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="360" lengthAdjust="spacingAndGlyphs">e edit   ? help   q quit                </text>
+<text x="21" y="494" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="360" lengthAdjust="spacingAndGlyphs">p profiles  [/] switch                  </text>
 <rect x="381" y="480" width="9" height="18" fill="#10151f"/>
 <rect x="12" y="498" width="9" height="18" fill="#10151f"/>
 <rect x="21" y="498" width="360" height="18" fill="#10151f"/>
+<text x="21" y="512" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="360" lengthAdjust="spacingAndGlyphs">e edit  ? help  q quit                  </text>
 <rect x="381" y="498" width="9" height="18" fill="#10151f"/>
 </svg>

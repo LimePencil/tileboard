@@ -1,6 +1,10 @@
 use std::{
     collections::BTreeMap,
-    sync::mpsc::{self, Receiver, Sender},
+    sync::{
+        Arc, Mutex, OnceLock,
+        atomic::{AtomicBool, Ordering},
+        mpsc::{self, Receiver, Sender},
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -173,12 +177,14 @@ pub struct Collector {
     external: BTreeMap<Source, Sender<SampleRequest>>,
     sender: Sender<SampleRequest>,
     receiver: Receiver<SampleResult>,
+    stopped: Arc<AtomicBool>,
 }
 
 impl Collector {
     pub fn start() -> Self {
         let (sender, requests) = mpsc::channel::<SampleRequest>();
         let (results, receiver) = mpsc::channel();
+        let stopped = Arc::new(AtomicBool::new(false));
         let mut external = BTreeMap::new();
         for source in [
             Source::Git,
@@ -189,30 +195,50 @@ impl Collector {
         ] {
             let (sender, requests) = mpsc::channel::<SampleRequest>();
             external.insert(source, sender);
-            let results = results.clone();
-            thread::spawn(move || {
-                let client = crate::integrations::client();
-                while let Ok(request) = requests.recv() {
-                    let mut metrics = Metrics {
-                        ready: true,
-                        ..Metrics::default()
-                    };
-                    if source == Source::Battery {
-                        metrics.batteries = Some(read_batteries());
-                    } else {
-                        metrics.external = Some(match &client {
-                            Ok(client) => {
-                                crate::integrations::collect(source, &request.options, client)
-                                    .map_err(|e| format!("{e:#}"))
-                            }
-                            Err(_) => Err("Cannot initialize HTTP client".into()),
-                        });
+            let requests = Arc::new(Mutex::new(requests));
+            let client = Arc::new(OnceLock::new());
+            // Two workers let another tile of the same kind progress while one stalls.
+            // Keep each source's capacity separate, and battery reads serialized.
+            let worker_count = if source == Source::Battery { 1 } else { 2 };
+            for _ in 0..worker_count {
+                let requests = Arc::clone(&requests);
+                let client = Arc::clone(&client);
+                let results = results.clone();
+                let stopped = Arc::clone(&stopped);
+                thread::spawn(move || {
+                    loop {
+                        // Release the queue lock before collecting, so workers can overlap I/O.
+                        let request = requests.lock().unwrap().recv();
+                        let Ok(request) = request else {
+                            break;
+                        };
+                        if stopped.load(Ordering::Acquire) {
+                            break;
+                        }
+                        let mut metrics = Metrics {
+                            ready: true,
+                            ..Metrics::default()
+                        };
+                        if source == Source::Battery {
+                            metrics.batteries = Some(read_batteries());
+                        } else {
+                            metrics.external =
+                                Some(match client.get_or_init(crate::integrations::client) {
+                                    Ok(client) => crate::integrations::collect(
+                                        source,
+                                        &request.options,
+                                        client,
+                                    )
+                                    .map_err(|e| format!("{e:#}")),
+                                    Err(_) => Err("Cannot initialize HTTP client".into()),
+                                });
+                        }
+                        if results.send(SampleResult { request, metrics }).is_err() {
+                            break;
+                        }
                     }
-                    if results.send(SampleResult { request, metrics }).is_err() {
-                        break;
-                    }
-                }
-            });
+                });
+            }
         }
         thread::spawn(move || {
             let mut system = System::new();
@@ -384,6 +410,7 @@ impl Collector {
             sender,
             receiver,
             external,
+            stopped,
         }
     }
 
@@ -401,6 +428,13 @@ impl Collector {
     }
     pub fn drain(&self) -> impl Iterator<Item = SampleResult> + '_ {
         self.receiver.try_iter()
+    }
+}
+
+impl Drop for Collector {
+    fn drop(&mut self) {
+        // In-flight work may finish, but queued requests must not start during shutdown.
+        self.stopped.store(true, Ordering::Release);
     }
 }
 

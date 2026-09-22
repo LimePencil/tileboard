@@ -4,11 +4,11 @@
 <text x="12" y="26" fill="#7dd3fc" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="bold" xml:space="preserve" textLength="99" lengthAdjust="spacingAndGlyphs"> TILEBOARD </text>
 <rect x="111" y="12" width="54" height="18" fill="#8de1bb"/>
 <text x="111" y="26" fill="#10151f" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="54" lengthAdjust="spacingAndGlyphs"> LIVE </text>
-<rect x="165" y="12" width="144" height="18" fill="#10151f"/>
-<text x="165" y="26" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="144" lengthAdjust="spacingAndGlyphs">   gallery · 4×4</text>
-<rect x="309" y="12" width="1143" height="18" fill="#10151f"/>
+<rect x="165" y="12" width="153" height="18" fill="#10151f"/>
+<text x="165" y="26" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="153" lengthAdjust="spacingAndGlyphs">   4×4 · 14 tiles</text>
+<rect x="318" y="12" width="1134" height="18" fill="#10151f"/>
 <rect x="12" y="30" width="1440" height="18" fill="#10151f"/>
-<text x="12" y="44" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1440" lengthAdjust="spacingAndGlyphs"> A little clarity for your terminal                                                                                                                             </text>
+<text x="12" y="44" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1440" lengthAdjust="spacingAndGlyphs"> Auto · gallery                                                                                                                                                 </text>
 <rect x="12" y="48" width="1440" height="18" fill="#10151f"/>
 <rect x="12" y="66" width="9" height="18" fill="#10151f"/>
 <rect x="21" y="66" width="9" height="18" fill="#161e2a"/>
@@ -1198,7 +1198,7 @@
 <rect x="1443" y="930" width="9" height="18" fill="#10151f"/>
 <rect x="12" y="948" width="9" height="18" fill="#10151f"/>
 <rect x="21" y="948" width="1422" height="18" fill="#10151f"/>
-<text x="21" y="962" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1422" lengthAdjust="spacingAndGlyphs">e edit   ? help   q quit                                                                                                                                      </text>
+<text x="21" y="962" fill="#8c9bae" font-family="DejaVu Sans Mono, monospace" font-size="15" font-weight="normal" xml:space="preserve" textLength="1422" lengthAdjust="spacingAndGlyphs">e edit  p profiles  [/] switch  ? help  q quit                                                                                                                </text>
 <rect x="1443" y="948" width="9" height="18" fill="#10151f"/>
 <rect x="12" y="966" width="9" height="18" fill="#10151f"/>
 <rect x="21" y="966" width="1422" height="18" fill="#10151f"/>

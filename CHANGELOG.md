@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.2.0 — 2026-09-22
+
+- Edit profile names, grid dimensions, and responsive rules in the terminal, with validation, undo, and cancel.
+- Save independent named layout copies, select profiles with a picker or quick-switch keys, and remember manual/Auto selection across restarts.
+- Allow two concurrent collections per external source so a stalled tile does not delay every other tile of the same kind; discard queued external work on shutdown.
 - Add a native Windows PowerShell installer and reorganize installation and getting-started documentation.
 - Add a single shell installer with platform detection, checksum verification, per-user installation, and persistent shell/Windows PATH setup.
 

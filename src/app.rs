@@ -15,6 +15,8 @@ use crate::{
     tiles::{Registry, Tile},
 };
 
+mod profiles;
+
 pub enum Modal {
     Add {
         selected: usize,
@@ -24,6 +26,19 @@ pub enum Modal {
         fields: Vec<(String, String)>,
         selected: usize,
         cursor: usize,
+    },
+    ProfileSettings {
+        fields: Vec<(String, String)>,
+        selected: usize,
+        cursor: usize,
+    },
+    SaveProfile {
+        fields: Vec<(String, String)>,
+        selected: usize,
+        cursor: usize,
+    },
+    Profiles {
+        selected: usize,
     },
     Help {
         scroll: usize,
@@ -57,6 +72,67 @@ fn next_boundary(value: &str, cursor: usize) -> usize {
         .map(|(i, _)| i)
         .find(|&i| i > cursor)
         .unwrap_or(value.len())
+}
+
+fn edit_field_key(
+    fields: &mut [(String, String)],
+    selected: &mut usize,
+    cursor: &mut usize,
+    key: KeyEvent,
+    accent: bool,
+) {
+    match key.code {
+        KeyCode::Tab | KeyCode::Down => {
+            *selected = (*selected + 1) % fields.len();
+            *cursor = fields[*selected].1.len();
+        }
+        KeyCode::BackTab | KeyCode::Up => {
+            *selected = (*selected + fields.len() - 1) % fields.len();
+            *cursor = fields[*selected].1.len();
+        }
+        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            fields[*selected].1.clear();
+            *cursor = 0;
+        }
+        KeyCode::Home => *cursor = 0,
+        KeyCode::End => *cursor = fields[*selected].1.len(),
+        KeyCode::Left | KeyCode::Right if accent && *selected == 1 => {
+            let colors = ["cyan", "magenta", "green", "yellow", "blue", "red", "white"];
+            let current = colors
+                .iter()
+                .position(|&color| color == fields[1].1)
+                .unwrap_or(0);
+            let next = if key.code == KeyCode::Right {
+                (current + 1) % colors.len()
+            } else {
+                (current + colors.len() - 1) % colors.len()
+            };
+            fields[1].1 = colors[next].into();
+            *cursor = fields[1].1.len();
+        }
+        KeyCode::Left => *cursor = previous_boundary(&fields[*selected].1, *cursor),
+        KeyCode::Right => *cursor = next_boundary(&fields[*selected].1, *cursor),
+        KeyCode::Backspace => {
+            let previous = previous_boundary(&fields[*selected].1, *cursor);
+            fields[*selected].1.replace_range(previous..*cursor, "");
+            *cursor = previous;
+        }
+        KeyCode::Delete => {
+            let next = next_boundary(&fields[*selected].1, *cursor);
+            fields[*selected].1.replace_range(*cursor..next, "");
+        }
+        KeyCode::Char(c)
+            if !key
+                .modifiers
+                .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
+                && !c.is_control()
+                && fields[*selected].1.len() + c.len_utf8() <= 512 =>
+        {
+            fields[*selected].1.insert(*cursor, c);
+            *cursor += c.len_utf8();
+        }
+        _ => {}
+    }
 }
 
 pub struct TileState {
@@ -151,11 +227,23 @@ impl App {
     }
 
     pub fn paste(&mut self, text: &str) {
-        if let Some(Modal::Settings {
-            fields,
-            selected,
-            cursor,
-        }) = &mut self.modal
+        if let Some(
+            Modal::Settings {
+                fields,
+                selected,
+                cursor,
+            }
+            | Modal::ProfileSettings {
+                fields,
+                selected,
+                cursor,
+            }
+            | Modal::SaveProfile {
+                fields,
+                selected,
+                cursor,
+            },
+        ) = &mut self.modal
         {
             for c in text.chars().filter(|c| !c.is_control()) {
                 if fields[*selected].1.len() + c.len_utf8() > 512 {
@@ -167,6 +255,7 @@ impl App {
         }
     }
     pub fn new(config: Config, path: PathBuf, registry: Registry) -> Self {
+        let profile = config.selected_profile(0, 0);
         let mut app = Self {
             config,
             path,
@@ -178,7 +267,7 @@ impl App {
             status_since: Instant::now(),
             size: Rect::default(),
             editing: false,
-            profile: 0,
+            profile,
             selected: 0,
             candidate: None,
             modal: None,
@@ -334,7 +423,7 @@ impl App {
         }
         self.size = size;
         if !self.editing {
-            self.profile = self.config.profile_for(size.width, size.height);
+            self.profile = self.config.selected_profile(size.width, size.height);
         }
     }
 
@@ -398,7 +487,9 @@ impl App {
         self.candidate = None;
         self.drag = None;
         self.history.clear();
-        self.profile = self.config.profile_for(self.size.width, self.size.height);
+        self.profile = self
+            .config
+            .selected_profile(self.size.width, self.size.height);
         self.sync_tiles();
     }
 
@@ -514,10 +605,15 @@ impl App {
             match key.code {
                 KeyCode::Char('q') | KeyCode::Esc => self.quit = true,
                 KeyCode::Char('e') => self.begin_edit(),
+                KeyCode::Char('p') => self.open_profiles(),
+                KeyCode::Char('[') => self.cycle_saved_profile(false),
+                KeyCode::Char(']') => self.cycle_saved_profile(true),
                 KeyCode::Char('r') => match Config::load(&self.path, &self.registry) {
                     Ok(config) => {
                         self.config = config;
-                        self.profile = self.config.profile_for(self.size.width, self.size.height);
+                        self.profile = self
+                            .config
+                            .selected_profile(self.size.width, self.size.height);
                         self.sync_tiles();
                         self.status = "Configuration reloaded".into();
                         self.status_seen.clear();
@@ -641,6 +737,8 @@ impl App {
                 });
             }
             KeyCode::Char('t') => self.open_settings(),
+            KeyCode::Char('g') => self.open_profile_settings(),
+            KeyCode::Char('n') => self.open_save_profile(),
             _ => {}
         }
     }
@@ -680,12 +778,24 @@ impl App {
     }
 
     fn modal_key(&mut self, key: KeyEvent) {
+        if matches!(
+            self.modal,
+            Some(
+                Modal::Profiles { .. } | Modal::ProfileSettings { .. } | Modal::SaveProfile { .. }
+            )
+        ) {
+            self.profile_modal_key(key);
+            return;
+        }
         let mut modal = self.modal.take().unwrap();
         if key.code == KeyCode::Esc {
             self.status = "Dialog closed · ? for help".into();
             return;
         }
         match &mut modal {
+            Modal::Profiles { .. } | Modal::ProfileSettings { .. } | Modal::SaveProfile { .. } => {
+                unreachable!()
+            }
             Modal::Help { scroll } => match key.code {
                 KeyCode::Down | KeyCode::Char('j') => {
                     *scroll = (*scroll + 1).min(crate::ui::HELP_LINES.len() - 1)
@@ -758,55 +868,6 @@ impl App {
                 selected,
                 cursor,
             } => match key.code {
-                KeyCode::Tab | KeyCode::Down => {
-                    *selected = (*selected + 1) % fields.len();
-                    *cursor = fields[*selected].1.len();
-                }
-                KeyCode::BackTab | KeyCode::Up => {
-                    *selected = (*selected + fields.len() - 1) % fields.len();
-                    *cursor = fields[*selected].1.len();
-                }
-                KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
-                    fields[*selected].1.clear();
-                    *cursor = 0;
-                }
-                KeyCode::Home => *cursor = 0,
-                KeyCode::End => *cursor = fields[*selected].1.len(),
-                KeyCode::Left | KeyCode::Right if *selected == 1 => {
-                    let colors = ["cyan", "magenta", "green", "yellow", "blue", "red", "white"];
-                    let current = colors
-                        .iter()
-                        .position(|&color| color == fields[1].1)
-                        .unwrap_or(0);
-                    let next = if key.code == KeyCode::Right {
-                        (current + 1) % colors.len()
-                    } else {
-                        (current + colors.len() - 1) % colors.len()
-                    };
-                    fields[1].1 = colors[next].into();
-                    *cursor = fields[1].1.len();
-                }
-                KeyCode::Left => *cursor = previous_boundary(&fields[*selected].1, *cursor),
-                KeyCode::Right => *cursor = next_boundary(&fields[*selected].1, *cursor),
-                KeyCode::Backspace => {
-                    let previous = previous_boundary(&fields[*selected].1, *cursor);
-                    fields[*selected].1.replace_range(previous..*cursor, "");
-                    *cursor = previous;
-                }
-                KeyCode::Delete => {
-                    let next = next_boundary(&fields[*selected].1, *cursor);
-                    fields[*selected].1.replace_range(*cursor..next, "");
-                }
-                KeyCode::Char(c)
-                    if !key
-                        .modifiers
-                        .intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) =>
-                {
-                    if !c.is_control() && fields[*selected].1.len() + c.len_utf8() <= 512 {
-                        fields[*selected].1.insert(*cursor, c);
-                        *cursor += c.len_utf8();
-                    }
-                }
                 KeyCode::Enter => {
                     let mut tile = self.config.profiles[self.profile].tiles[self.selected].clone();
                     tile.title = fields[0].1.clone();
@@ -841,7 +902,7 @@ impl App {
                         Err(error) => self.status = format!("Invalid settings: {error:#}"),
                     }
                 }
-                _ => {}
+                _ => edit_field_key(fields, selected, cursor, key, true),
             },
         }
         self.modal = Some(modal);

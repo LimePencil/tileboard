@@ -71,7 +71,7 @@ def main():
                 screen = capture()
                 assert 'Enlarge tile' not in screen, screen
                 keys('e')
-                wait_for(profile + ' profile')
+                wait_for(' · ' + profile + ' · ')
                 assert 'Esc cancel' in capture(), capture()
                 keys('Escape')
             tmux('resize-window', '-t', 'dashboard', '-x', '120', '-y', '32')
@@ -134,12 +134,56 @@ def main():
             assert saved['profiles'][0]['tiles'][0]['refresh_ms'] == 5000
             assert saved['theme'] == 'amber'
             assert '5s' in capture()
+            # Profile grid changes and named copies use the same save/undo/cancel flow.
+            keys('e', 'g', 'Tab', 'C-u')
+            paste('8')
+            keys('Enter', 's')
+            wait_for('Saved')
+            assert tomllib.loads(config.read_text())['profiles'][0]['columns'] == 8
+            keys('e', 'n', 'C-u')
+            paste('Work 한글')
+            keys('Enter', 's')
+            wait_for('Manual · Work 한글')
+            saved = tomllib.loads(config.read_text())
+            assert saved['active_profile'] == 'Work 한글'
+            copied = next(p for p in saved['profiles'] if p['name'] == 'Work 한글')
+            assert copied['automatic'] is False and copied['columns'] == 8
+            assert copied['tiles'] == saved['profiles'][0]['tiles']
+            # A saved manual profile survives process restart and terminal resizing.
+            keys('q')
+            tmux('new-session', '-d', '-s', 'dashboard', '-x', '80', '-y', '24', command)
+            tmux('set-option', '-g', 'status', 'off')
+            wait_for('Manual · Work 한글')
+            keys('p', 'Home', 'Enter')
+            wait_for('Auto · compact')
+            assert 'active_profile' not in tomllib.loads(config.read_text())
+            keys(']')
+            wait_for('Manual · tall')
+            keys('[')
+            wait_for('Manual · compact')
+            tmux('resize-window', '-t', 'dashboard', '-x', '120', '-y', '32')
+            wait_for('Manual · compact')
+            keys('p', 'Home', 'Enter')
+            wait_for('Auto · wide')
+            before = config.read_bytes()
+            keys('e', 'n', 'Enter', 'Escape')
+            wait_for('Edit session cancelled')
+            assert config.read_bytes() == before
+            # A grid shrink that cuts off existing tiles stays in the settings dialog.
+            keys('e', 'g', 'Tab', 'C-u')
+            paste('1')
+            keys('Enter')
+            wait_for('Invalid profile')
+            keys('Escape', 'Escape')
+            wait_for('Edit session cancelled')
+            assert config.read_bytes() == before
             # Reload errors preserve the live layout and the invalid external file.
             config.write_text('broken = [')
             keys('r')
             wait_for('Reload failed')
             assert config.read_text() == 'broken = ['
-            assert 'New My 한글 CPU' in capture()
+            # The wider grid truncates this tile's title, but the live layout remains.
+            assert 'New My' in capture(), capture()
             keys('q')
             assert subprocess.run(BASE + ['has-session', '-t', 'dashboard'], capture_output=True).returncode != 0
             # Two instances of the same tile must visibly keep separate schedules.
@@ -173,7 +217,7 @@ row_span = 1
                 time.sleep(.1)
             assert later[1] != initial[1], (initial, later)
             keys('q')
-            print('PASS: six live tiles, five responsive shapes, readable controls, full-grid swap, blocked resize, replace/undo, mouse move, save, Unicode input, add/settings, independent clock intervals, themes, cancel, reload failure, clean exit')
+            print('PASS: six live tiles, five responsive shapes, readable controls, full-grid swap, blocked resize, replace/undo, mouse move, save, Unicode input, add/settings, independent clock intervals, themes, profile grid/settings/copy/restart/quick switching/Auto, cancel, reload failure, clean exit')
         finally:
             subprocess.run(BASE + ['kill-server'], capture_output=True)
 

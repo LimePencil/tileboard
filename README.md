@@ -8,7 +8,7 @@ Fourteen built-in tiles cover system metrics, processes, battery, temperatures, 
 
 ![Tileboard at 120×30, rendered from the actual UI with sample data](docs/previews/wide.svg)
 
-[All tiles](docs/previews/gallery.svg) · [Swap preview](docs/previews/swap.svg) · [Compact](docs/previews/compact.svg) · [Small](docs/previews/small.svg) · [Detailed](docs/previews/detail.svg) · [Amber](docs/previews/amber.svg) · [Monochrome](docs/previews/mono.svg) · [Editor](docs/previews/editor.svg) · [Settings](docs/previews/settings.svg)
+[All tiles](docs/previews/gallery.svg) · [Swap preview](docs/previews/swap.svg) · [Compact](docs/previews/compact.svg) · [Small](docs/previews/small.svg) · [Detailed](docs/previews/detail.svg) · [Amber](docs/previews/amber.svg) · [Monochrome](docs/previews/mono.svg) · [Editor](docs/previews/editor.svg) · [Settings](docs/previews/settings.svg) · [Profiles](docs/previews/profiles.svg) · [Profile settings](docs/previews/profile-settings.svg)
 
 Slate, amber, and monochrome themes use muted borders, padded cards, and slim usage bars. Larger tiles show oversized values, memory/network history graphs, and per-core CPU bars. Editing adds dotted grid guides and shaded placement previews; success notices fade after four seconds. Previews use sample data; live tiles display your machine's metrics.
 
@@ -47,12 +47,12 @@ To pin a release or choose an installation directory:
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/LimePencil/tileboard/main/install.sh | sh -s -- \
-  --version 0.1.0 --bin-dir "$HOME/.local/bin"
+  --version 0.2.0 --bin-dir "$HOME/.local/bin"
 ```
 
 ```powershell
 & ([scriptblock]::Create((irm https://raw.githubusercontent.com/LimePencil/tileboard/main/install.ps1))) `
-  -Version 0.1.0 -BinDir "$env:LOCALAPPDATA\Tileboard\bin"
+  -Version 0.2.0 -BinDir "$env:LOCALAPPDATA\Tileboard\bin"
 ```
 
 | Option | Shell installer | PowerShell installer |
@@ -94,7 +94,7 @@ For development, use `cargo run --release --locked` from the checkout.
 
 Run `tileboard` in a UTF-8 terminal. The first launch creates a default configuration in your platform's user configuration directory. SSH works when the terminal forwards input and resize events; all editing operations are available from the keyboard.
 
-Press **e** to edit, **Tab** to select a tile, and the **arrow keys** to move or swap it. Press **t** for settings, **a** to add, **r** to replace, or **c** to change theme. Press **s** to save. Outside edit mode, **r** reloads your configuration and **q** exits.
+Press **e** to edit, **Tab** to select a tile, and the **arrow keys** to move or swap it. Press **t** for settings, **a** to add, **r** to replace, or **c** to change theme. Press **s** to save. Outside edit mode, **p** opens saved profiles, **[** / **]** switches to the previous/next profile, **r** reloads your configuration, and **q** exits.
 
 To use a configuration at a specific location:
 
@@ -114,6 +114,16 @@ tileboard --config examples/all-tiles.toml
 ```
 
 The full gallery works best at **160×54** or larger. The one-line installers install only the executable; download an archive or clone the repository to get these examples. Relative file and repository paths resolve from the directory where you run Tileboard.
+
+## Save and switch profiles
+
+A profile is a named grid layout with its own tiles and settings. To keep a layout as a reusable preset, press **e**, then **n**, enter a new name, and press **Enter**. This creates an independent copy of the current layout. Press **s** to save and use it. Copying, renaming, and editing profiles support **u** to undo and **Esc** to cancel the whole edit session before saving.
+
+Outside edit mode, press **p** to open the profile picker, select a name with **↑/↓**, and press **Enter**. Use **[** / **]** to switch directly to the previous/next profile in configuration order. The selection is saved immediately and survives restarts; a manually selected profile stays selected when the terminal resizes. Choose **Auto** in the picker (**Home**, then **Enter**) to resume responsive layout selection. If saving the selection fails, the current selection is preserved. Reload external configuration changes with **r** before switching.
+
+Saved copies are **manual only** by default, so creating one does not change Auto mode. Each copy preserves the original tile settings and grid. Themes still apply to the entire dashboard. A manually selected layout may need a larger terminal to keep all its tiles readable.
+
+To edit a profile's grid and responsive rules, press **e**, use **p** to reach the profile, then press **g**. Edit its name, grid columns/rows, automatic-selection flag (`true` or `false`), terminal width/height bounds, and aspect bounds. Blank minimum width/height means zero; blank maximum or aspect fields mean no limit. **Enter** validates and applies the changes, and **s** saves. Shrinking the grid cannot cut off existing tiles: move or resize those tiles first. The final fallback must remain automatic and unconditional. Profiles enabled for automatic selection are matched in file order.
 
 ## Edit your dashboard
 
@@ -135,7 +145,9 @@ Press **e** to start an edit session. The shown profile stays pinned while editi
 | t | Edit title, accent, tile-specific options, and refresh interval |
 | c | Cycle slate, amber, and monochrome themes |
 | u | Undo an applied edit (up to 100 changes) |
-| p | Cycle responsive profiles |
+| p | Cycle profiles for editing |
+| g | Edit profile name, grid dimensions, and responsive rules |
+| n | Copy this layout under a new profile name |
 | s | Save all profiles and leave edit mode |
 | Esc | Discard a preview; otherwise cancel the entire edit session |
 | ? | Show help |
@@ -171,7 +183,7 @@ The gallery contains example sources: this repository, a local health endpoint, 
 
 Process CPU uses **100% per logical CPU**, so a multithreaded process can exceed 100%; `CPU¹` marks this convention. Its first sample warms up. Temperature and battery availability depend on OS/hardware support; missing hardware is shown explicitly. Battery collection uses [starship-battery](https://docs.rs/starship-battery/latest/starship_battery/).
 
-Git requires the `git` executable and reads the local checkout without fetching. Relative file/repository paths are resolved from the application's working directory. Service checks use HEAD: only 2xx is healthy, and redirects are reported without being followed. Weather uses [Open-Meteo](https://open-meteo.com/en/docs); blank coordinates make no request. Source workers are separate from system sampling and from one another, with five-second HTTP/Git timeouts. Tiles of the same external source share that source's worker.
+Git requires the `git` executable and reads the local checkout without fetching. Relative file/repository paths are resolved from the application's working directory. Service checks use HEAD: only 2xx is healthy, and redirects are reported without being followed. Weather uses [Open-Meteo](https://open-meteo.com/en/docs); blank coordinates make no request. Source workers are separate from system sampling and from one another, with five-second HTTP/Git timeouts. Git, service, weather, and usage each allow up to two concurrent collections, so one slow tile does not block another tile of the same kind. Additional requests wait for a free worker; battery reads remain serialized. Queued external work is discarded on shutdown.
 
 ### Usage reports
 
@@ -195,7 +207,7 @@ Each tile keeps its own last sample and history; redrawing or refreshing another
 
 ## Responsive rules
 
-See [examples/dashboard.toml](examples/dashboard.toml) for a complete working configuration. Profiles are checked **in file order; the first match wins**. The last profile must be an unconditional fallback. The defaults use these rules:
+See [examples/dashboard.toml](examples/dashboard.toml) for a complete working configuration. In Auto mode, profiles with `automatic = true` (the default) are checked **in file order; the first match wins**. Profiles with `automatic = false` are available only through manual selection. The last profile must be an unconditional fallback. The defaults use these rules:
 
 | Profile | Matches | Visible tiles |
 | --- | --- | --- |
@@ -211,9 +223,11 @@ All rules, placements, and visible tiles remain user-defined. The small profiles
 ```toml
 version = 1
 theme = "slate" # Also: "amber", "mono"
+# active_profile = "wide" # Omit for Auto; set a profile name to pin it.
 
 [[profiles]]
 name = "wide"
+automatic = true # Use false for a manual-only saved layout.
 min_width = 110
 min_height = 24
 # Optional inclusive limits:
@@ -245,7 +259,7 @@ rows = 4
 
 Positions start at zero. A tile may span any number of cells within its grid. Each profile defines its own tiles and settings; omit a tile from a profile to hide it at that size. Grid dimensions range from 1 to 64. Terminal cells are distributed proportionally, including leftover columns/rows. Aspect means terminal columns divided by rows, not a physical pixel ratio.
 
-Grid dimensions and responsive rules are edited in TOML; tile placement and settings are also editable in the UI. Tiles below their minimum readable size show a compact placeholder. Terminals smaller than 26×10 show a resize prompt. Swaps affect only the selected tile and its destination. There is no cascading rearrangement or scrolling.
+Grid dimensions and responsive rules can be edited with **g** in edit mode or in TOML; tile placement and settings are also editable in the UI. Tiles below their minimum readable size show a compact placeholder. Terminals smaller than 26×10 show a resize prompt. Swaps affect only the selected tile and its destination. There is no cascading rearrangement or scrolling.
 
 ## Write a Rust tile
 
@@ -293,6 +307,7 @@ Source structure:
 - `config.rs`: TOML schema, profile rules, validation, atomic saves.
 - `grid.rs`: spanning placement, collision checks, terminal/grid coordinate mapping.
 - `app.rs`: independent tile schedules/caches, editor transactions, previews, undo, keyboard/mouse handling.
+- `app/profiles.rs`: profile settings, named layout copies, persisted manual/automatic selection.
 - `ui.rs`: dashboard and editor rendering.
 - `metrics.rs`: background system sampling and source workers.
 - `integrations.rs`: Git, HTTP checks, weather, and usage-report collection.
